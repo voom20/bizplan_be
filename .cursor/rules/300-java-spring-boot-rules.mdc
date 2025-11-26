@@ -1,0 +1,31 @@
+---
+description: Java 17 and Spring Boot 3.x development guidelines for Backend Core
+globs: **/*.java
+alwaysApply: false
+---
+# Java & Spring Boot Guidelines
+
+## Core Principles
+- **Language:** Java 17 (LTS)
+- **Framework:** Spring Boot 3.x
+- **Architecture:** Layered (Controller -> Service -> Repository)
+- **Dependency Injection:** Constructor injection only (avoid @Autowired on fields).
+
+## Code Style
+- Use **Lombok** for boilerplate (@Data, @RequiredArgsConstructor, @Builder).
+- **Naming:** camelCase for methods/vars, PascalCase for classes.
+- **Constants:** UPPER_SNAKE_CASE.
+
+## Project Structure
+- `api`: Controllers (REST endpoints).
+- `domain`: Business logic and Entities.
+- `infrastructure`: External interfaces (DB, External APIs).
+- `dto`: Data Transfer Objects (Request/Response records).
+
+## Best Practices
+- **Validation:** Use `jakarta.validation` (@NotNull, @Size) in DTOs.
+- **Error Handling:** Use `@RestControllerAdvice` and `GlobalExceptionHandler`.
+- **Testing:** 
+  - Unit tests: JUnit 5 + Mockito.
+  - Integration tests: @SpringBootTest.
+- **Logging:** Use `@Slf4j`. Structured logging preferred.

@@ -1,0 +1,27 @@
+---
+description: REST API design standards and error handling
+globs: **/*.java, **/*.py, **/*.yaml
+alwaysApply: false
+---
+# API Design Guidelines
+
+## REST Standards
+- **Resources:** Nouns, plural (e.g., `/projects`, `/users`).
+- **Methods:**
+  - `GET`: Retrieve.
+  - `POST`: Create/Action.
+  - `PUT/PATCH`: Update.
+  - `DELETE`: Remove.
+- **Status Codes:**
+  - 200 OK, 201 Created.
+  - 400 Bad Request, 401 Unauth, 403 Forbidden, 404 Not Found.
+  - 500 Internal Server Error.
+
+## Request/Response
+- **Format:** JSON (snake_case preferred for Python, camelCase for Java - maintain consistency via Jackson config).
+- **Envelopes:** Avoid envelopes for success (return data directly). Use standard error envelope for failures.
+
+## Documentation
+- **OpenAPI:** All APIs must be documented using OpenAPI 3.0 (Swagger).
+- **Java:** Use SpringDoc.
+- **Python:** Use FastAPI auto-docs.

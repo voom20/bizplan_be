@@ -1,0 +1,36 @@
+---
+description: Backend technical stack definition (Core & AI Engine)
+alwaysApply: true
+---
+# Technical Stack
+Referenced in: [001-project-overview.mdc](001-project-overview.mdc)
+
+## Backend Core (API Server)
+- Language: Java 17
+- Framework: Spring Boot 3.x
+- Build Tool: Gradle
+- API Style: REST (OpenAPI 3.0)
+- Testing: JUnit 5, Mockito
+
+## AI/Doc Engine (Microservice)
+- Language: Python 3.10+
+- Framework: FastAPI
+- AI Orchestration: LangChain
+- LLM Provider: Google Gemini (via Gateway)
+- Testing: Pytest
+
+## Data Persistence
+- Database: MySQL 8.x (InnoDB, utf8mb4)
+- Migration: Flyway
+- Caching: Redis (Optional for MVP)
+
+## Infrastructure
+- Containerization: Docker, Docker Compose
+- Cloud: AWS (S3, RDS)
+
+## See also:
+- [003-development-guidelines.mdc](003-development-guidelines.mdc) for usage guidelines
+- [300-java-spring-boot-rules.mdc](300-java-spring-boot-rules.mdc) for Java/Spring rules
+- [301-python-fastapi-rules.mdc](301-python-fastapi-rules.mdc) for Python/AI rules
+- [302-database-mysql-rules.mdc](302-database-mysql-rules.mdc) for Database rules
+- [303-api-design-rules.mdc](303-api-design-rules.mdc) for API standards

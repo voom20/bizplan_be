@@ -1,0 +1,31 @@
+---
+description: Python and FastAPI guidelines for AI/Doc Engine
+globs: **/*.py
+alwaysApply: false
+---
+# Python & FastAPI Guidelines
+
+## Core Principles
+- **Language:** Python 3.10+
+- **Framework:** FastAPI
+- **Async:** Use `async def` for IO-bound operations (LLM calls, DB).
+
+## Code Style
+- Follow **PEP 8** style guide.
+- Use **Type Hints** for all function arguments and returns.
+- Use **Pydantic** (v2) for data validation and settings.
+
+## AI & LangChain
+- **Prompt Engineering:** Store prompts in external templates or dedicated constants, not hardcoded in logic.
+- **LLM Calls:** Always wrap LLM calls with timeout and retry logic.
+- **Streaming:** Support streaming responses for long-generation tasks.
+
+## Project Structure
+- `app/api`: Routes and Endpoints.
+- `app/core`: Config and Security.
+- `app/services`: Business logic and LLM chains.
+- `app/models`: Pydantic models.
+
+## Testing
+- Use `pytest` and `pytest-asyncio`.
+- Mock external LLM calls during tests to avoid costs.
