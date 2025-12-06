@@ -47,6 +47,10 @@ public class Project {
     @Column(name = "user_id", length = 36)
     private String userId;
 
+    /** Wizard 단계별 답변 데이터 (JSON 문자열) */
+    @Column(name = "wizard_answers", columnDefinition = "TEXT")
+    private String wizardAnswers;
+
     /** 생성일시 */
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -90,6 +94,15 @@ public class Project {
      */
     public void changeStatus(ProjectStatus status) {
         this.status = status;
+    }
+
+    /**
+     * Wizard 답변 업데이트.
+     *
+     * @param wizardAnswers JSON 형태의 답변 문자열
+     */
+    public void updateWizardAnswers(String wizardAnswers) {
+        this.wizardAnswers = wizardAnswers;
     }
 }
 
