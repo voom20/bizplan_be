@@ -1,7 +1,20 @@
 package com.vibe.bizplan.bizplan_be.api;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.vibe.bizplan.bizplan_be.domain.model.ExportFormat;
 import com.vibe.bizplan.bizplan_be.domain.service.DocumentExportService;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -9,13 +22,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
 /**
  * 문서 내보내기 REST API 컨트롤러.
@@ -91,13 +97,22 @@ public class ExportController {
             summary = "지원 형식 목록",
             description = "사용 가능한 내보내기 형식을 반환합니다."
     )
-    public ResponseEntity<?> getSupportedFormats() {
-        return ResponseEntity.ok(new Object() {
-            public final String[] formats = {"pdf", "html"};
-            public final String defaultFormat = "pdf";
-            public final String note = "HWP 형식은 향후 지원 예정입니다.";
-        });
+    public ResponseEntity<SupportedFormatsResponse> getSupportedFormats() {
+        return ResponseEntity.ok(new SupportedFormatsResponse(
+                new String[]{"pdf", "html"},
+                "pdf",
+                "HWP 형식은 향후 지원 예정입니다."
+        ));
     }
+
+    /**
+     * 지원 형식 응답 DTO.
+     */
+    public record SupportedFormatsResponse(
+            String[] formats,
+            String defaultFormat,
+            String note
+    ) {}
 
     /**
      * 형식 문자열 파싱.

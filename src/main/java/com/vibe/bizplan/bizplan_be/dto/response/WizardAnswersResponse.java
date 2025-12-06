@@ -2,6 +2,8 @@ package com.vibe.bizplan.bizplan_be.dto.response;
 
 import java.util.Map;
 
+import com.vibe.bizplan.bizplan_be.domain.model.TemplateCode;
+
 /**
  * Wizard 답변 응답 DTO.
  * 저장된 Wizard 답변 데이터를 반환한다.
@@ -22,16 +24,17 @@ public record WizardAnswersResponse(
 ) {
     
     /**
-     * 정적 팩토리 메서드.
+     * 정적 팩토리 메서드 (템플릿 코드 기반).
+     * 템플릿별로 정의된 전체 단계 수를 사용한다.
      *
      * @param projectId 프로젝트 ID
      * @param answers 답변 데이터
+     * @param templateCode 템플릿 코드 (전체 단계 수 결정)
      * @return WizardAnswersResponse
      */
-    public static WizardAnswersResponse of(String projectId, Map<String, Object> answers) {
+    public static WizardAnswersResponse of(String projectId, Map<String, Object> answers, TemplateCode templateCode) {
         int completedSteps = answers != null ? answers.size() : 0;
-        // TODO: 템플릿별 전체 단계 수 조회 로직 추가
-        int totalSteps = 10; // 임시 기본값
+        int totalSteps = templateCode != null ? templateCode.getTotalSteps() : 10;
         return new WizardAnswersResponse(projectId, answers, completedSteps, totalSteps);
     }
 }

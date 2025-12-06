@@ -2,36 +2,36 @@
 
 ## 📖 Project Overview
 
-**Bizplan** is an intelligent partner designed to transform the complex business planning process into a data-driven decision-making journey. It helps first-time founders and small business owners quickly create high-quality business plans to pass funding gates (government grants, loans) and focus on sustainable growth.
+**Bizplan**은 복잡한 사업계획서 작성 과정을 데이터 기반 의사결정 여정으로 변환하는 지능형 파트너입니다. 처음 창업하는 창업자와 소상공인이 정부 지원금, 은행 대출 등 펀딩 관문을 빠르게 통과하고 지속 가능한 성장에 집중할 수 있도록 돕습니다.
 
 ### 🎯 Vision
-> "Transform the complex business planning process into a data-driven decision-making journey that reduces failure rates."
+> "복잡한 사업계획 작성 과정을 데이터 기반 의사결정 여정으로 전환하여 실패율을 줄입니다."
 
 ## ✨ Key Features
 
 - **🚀 Submission Wizard**
-  - Step-by-step guide tailored for government and bank forms
-  - Auto-save and progress tracking
-  - 100% template compatibility
+  - 정부 및 은행 양식에 맞춘 단계별 가이드
+  - 자동 저장 및 진행률 추적
+  - 100% 템플릿 호환성
 
 - **💰 Financial Auto-Engine**
-  - 3-year P&L and cash flow projections from key variables
-  - Unit Economics (LTV, CAC, BEP) calculations
-  - Deterministic rule-based engine (No hallucinations)
+  - 핵심 변수 기반 3년 손익계산서 및 현금흐름 예측
+  - 유닛 이코노믹스(LTV, CAC, BEP) 자동 계산
+  - 결정론적 규칙 기반 엔진 (환각 없음)
 
 - **🤖 AI Drafting (Co-Pilot)**
-  - Context-aware writing assistance using **Google Gemini** & **LangChain**
-  - 'Easy' and 'Expert' modes for different user needs
-  - Section-by-section regeneration
+  - **Google Gemini** & **LangChain** 기반 문맥 인식 작성 지원
+  - 'Easy' 및 'Expert' 모드 지원
+  - 섹션별 재생성 기능
 
 - **📊 PMF Diagnostic**
-  - Product-Market Fit analysis based on standard frameworks
-  - Risk identification and recommendations
+  - 표준 프레임워크 기반 Product-Market Fit 분석
+  - 리스크 식별 및 권장 사항 제공
 
 - **📄 Document Export**
-  - PDF export with professional formatting
-  - HTML preview support
-  - (HWP support planned for future release)
+  - 전문적인 포맷의 PDF 내보내기
+  - HTML 미리보기 지원
+  - (HWP 지원은 향후 릴리스 예정)
 
 ## 🛠 Technical Stack
 
@@ -39,12 +39,12 @@
 | Component | Technology |
 |-----------|------------|
 | Language | Java 21 |
-| Framework | Spring Boot 3.5.x |
-| Build | Gradle |
+| Framework | Spring Boot 3.5.8 |
+| Build | Gradle 8.x |
 | API | REST (OpenAPI 3.0 + SpringDoc) |
 | Database | MySQL 8.x / H2 (dev) |
 | Migration | Flyway |
-| Security | Spring Security, AES-256, BCrypt |
+| Security | Spring Security, AES-256 |
 | Testing | JUnit 5, Mockito |
 
 ### AI Engine (Microservice)
@@ -62,6 +62,7 @@
 | Metrics | Micrometer + Prometheus |
 | Visualization | Grafana |
 | Load Testing | k6 |
+| Logging | Logstash (JSON structured) |
 | Container | Docker, Docker Compose |
 
 ## 🚀 Getting Started
@@ -119,39 +120,40 @@ uvicorn app.main:app --port 8000
 ### Projects
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/projects/templates` | Get available templates |
-| POST | `/projects` | Create new project |
-| GET | `/projects/{id}` | Get project details |
-| GET | `/projects` | List user's projects |
+| GET | `/projects/templates` | 사용 가능한 템플릿 목록 조회 |
+| POST | `/projects` | 새 프로젝트 생성 |
+| GET | `/projects/{id}` | 프로젝트 상세 정보 조회 |
+| GET | `/projects` | 내 프로젝트 목록 조회 |
 
 ### Wizard
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/projects/{id}/wizard/steps` | Save wizard step answers |
-| GET | `/projects/{id}/wizard/answers` | Get all wizard answers |
-| GET | `/projects/{id}/wizard/steps/{stepId}` | Get specific step answers |
+| POST | `/projects/{id}/wizard/steps` | Wizard 단계별 답변 저장 |
+| GET | `/projects/{id}/wizard/answers` | 전체 Wizard 답변 조회 |
+| GET | `/projects/{id}/wizard/steps/{stepId}` | 특정 단계 답변 조회 |
 
-### Business Plan
+### Business Plan Documents
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/projects/{id}/documents/business-plan/generate` | Generate business plan |
-| POST | `/projects/{id}/documents/{docId}/sections/{type}/regenerate` | Regenerate section |
-| GET | `/projects/{id}/documents/business-plan/latest` | Get latest version |
-| GET | `/projects/{id}/documents/business-plan/versions` | Get all versions |
+| POST | `/projects/{id}/documents/business-plan/generate` | 사업계획서 전체 생성 |
+| POST | `/projects/{id}/documents/{docId}/sections/{type}/regenerate` | 특정 섹션 재생성 |
+| GET | `/projects/{id}/documents/business-plan/latest` | 최신 버전 문서 조회 |
+| GET | `/projects/{id}/documents/business-plan/versions` | 모든 버전 목록 조회 |
+| GET | `/projects/{id}/documents/{docId}` | 특정 문서 조회 |
 
-### Financial
+### Financials
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/projects/{id}/financials/generate` | Generate financial projections |
-| GET | `/projects/{id}/financials` | Get saved projections |
-| POST | `/financials/preview` | Preview without saving |
+| POST | `/projects/{id}/financials/generate` | 재무 추정 생성 (저장) |
+| POST | `/financials/preview` | 재무 추정 미리보기 (저장 안함) |
 
 ### Export
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/projects/{id}/export?format=pdf` | Export as PDF |
-| GET | `/projects/{id}/export?format=html` | Export as HTML |
-| GET | `/projects/{id}/export/formats` | Get supported formats |
+| GET | `/projects/{id}/export?format=pdf` | PDF로 내보내기 |
+| GET | `/projects/{id}/export?format=html` | HTML로 내보내기 |
+| GET | `/projects/{id}/export/versions/{version}` | 특정 버전 내보내기 |
+| GET | `/projects/{id}/export/formats` | 지원 형식 목록 조회 |
 
 ## 📂 Project Structure
 
@@ -159,7 +161,16 @@ uvicorn app.main:app --port 8000
 bizplan_be/
 ├── src/main/java/com/vibe/bizplan/bizplan_be/
 │   ├── api/                    # REST Controllers
+│   │   ├── BusinessPlanController.java
+│   │   ├── ExportController.java
+│   │   ├── FinancialController.java
+│   │   ├── FinancialPreviewController.java
+│   │   ├── GlobalExceptionHandler.java
+│   │   ├── ProjectController.java
+│   │   └── WizardController.java
 │   ├── config/                 # Spring Configurations
+│   │   ├── SecurityConfig.java
+│   │   └── ThymeleafConfig.java
 │   ├── domain/
 │   │   ├── entity/             # JPA Entities
 │   │   ├── model/              # Enums & Value Objects
@@ -168,13 +179,17 @@ bizplan_be/
 │   │   ├── request/            # Request DTOs
 │   │   └── response/           # Response DTOs
 │   └── infrastructure/
-│       ├── client/             # External API Clients
+│       ├── client/             # External API Clients (AI Engine)
 │       ├── repository/         # JPA Repositories
-│       └── security/           # Security Utils
+│       └── security/           # AES Encryption Utils
 ├── src/main/resources/
 │   ├── db/migration/           # Flyway Scripts
+│   │   ├── V1__create_project_table.sql
+│   │   ├── V2__add_wizard_answers_column.sql
+│   │   └── V3__create_business_plan_document_table.sql
 │   ├── templates/export/       # PDF Templates
-│   └── application.properties
+│   ├── application.properties
+│   └── application-mysql.properties
 ├── docker/                     # Docker Compose files
 │   ├── docker-compose.monitoring.yml
 │   ├── prometheus/
@@ -200,6 +215,14 @@ docker-compose -f docker/docker-compose.monitoring.yml up -d
 - JVM metrics (memory, GC, threads)
 - HTTP request metrics (duration, count, errors)
 - Custom business metrics
+
+### Actuator Endpoints
+| Endpoint | Description |
+|----------|-------------|
+| `/actuator/health` | 헬스 체크 |
+| `/actuator/info` | 애플리케이션 정보 |
+| `/actuator/metrics` | 메트릭 조회 |
+| `/actuator/prometheus` | Prometheus 메트릭 |
 
 ## 🧪 Load Testing
 
@@ -227,9 +250,17 @@ k6 run k6/scenarios/document-generation.js
 ## 🔒 Security
 
 - **Encryption**: AES-256 for sensitive data at rest
-- **Password Hashing**: BCrypt
 - **TLS**: 1.2+ for all transit (production)
 - **Data Isolation**: Workspace-level separation
+- **Environment Variables**: 운영 환경에서는 반드시 환경변수로 암호화 키 설정
+
+### Environment Variables (Production)
+```bash
+export DB_USERNAME=your_db_user
+export DB_PASSWORD=your_db_password
+export ENCRYPTION_KEY=your_base64_encoded_32byte_key
+export AI_ENGINE_URL=http://your-ai-engine:8000
+```
 
 ## 🤝 Contributing
 
