@@ -51,29 +51,14 @@ public class ProjectController {
             @Parameter(description = "템플릿 카테고리 필터 (government, bank, investor)")
             @RequestParam(required = false) String category
     ) {
-        long startTime = System.currentTimeMillis();
-        log.info("[API] GET /projects/templates 요청 수신 - category={}", category);
-        
-        try {
-            List<TemplateResponse> templates;
-            if (category != null && !category.isBlank()) {
-                templates = templateService.getTemplatesByCategory(category);
-            } else {
-                templates = templateService.getAllTemplates();
-            }
-            
-            long duration = System.currentTimeMillis() - startTime;
-            log.info("[API] GET /projects/templates 응답 완료 - category={}, count={}, duration={}ms", 
-                    category, templates.size(), duration);
-            
-            return ResponseEntity.ok(templates);
-            
-        } catch (Exception e) {
-            long duration = System.currentTimeMillis() - startTime;
-            log.error("[API] GET /projects/templates 요청 실패 - category={}, duration={}ms", 
-                    category, duration, e);
-            throw e;
+        List<TemplateResponse> templates;
+        if (category != null && !category.isBlank()) {
+            templates = templateService.getTemplatesByCategory(category);
+        } else {
+            templates = templateService.getAllTemplates();
         }
+        log.debug("[Project] 템플릿 조회 완료 - category={}, count={}", category, templates.size());
+        return ResponseEntity.ok(templates);
     }
 
     /**
@@ -93,32 +78,10 @@ public class ProjectController {
     public ResponseEntity<ProjectResponse> createProject(
             @Valid @RequestBody CreateProjectRequest request
     ) {
-        long startTime = System.currentTimeMillis();
-        String templateCode = request.templateCode();
-        String title = request.title();
-        
-        log.info("[API] POST /projects 요청 수신 - templateCode={}, title={}", templateCode, title);
-        
-        try {
-            ProjectResponse response = projectService.createProject(request);
-            
-            long duration = System.currentTimeMillis() - startTime;
-            log.info("[API] POST /projects 응답 완료 (201) - projectId={}, templateCode={}, duration={}ms", 
-                    response.projectId(), templateCode, duration);
-            
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-            
-        } catch (IllegalArgumentException e) {
-            long duration = System.currentTimeMillis() - startTime;
-            log.warn("[API] POST /projects 요청 실패 (400) - templateCode={}, error={}, duration={}ms", 
-                    templateCode, e.getMessage(), duration);
-            throw e;
-        } catch (Exception e) {
-            long duration = System.currentTimeMillis() - startTime;
-            log.error("[API] POST /projects 요청 실패 (500) - templateCode={}, duration={}ms", 
-                    templateCode, duration, e);
-            throw e;
-        }
+        ProjectResponse response = projectService.createProject(request);
+        log.debug("[Project] 프로젝트 생성 완료 - projectId={}, templateCode={}", 
+                response.projectId(), request.templateCode());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     /**
@@ -137,28 +100,9 @@ public class ProjectController {
     public ResponseEntity<ProjectResponse> getProject(
             @Parameter(description = "프로젝트 ID") @PathVariable String projectId
     ) {
-        long startTime = System.currentTimeMillis();
-        log.info("[API] GET /projects/{} 요청 수신", projectId);
-        
-        try {
-            return projectService.getProject(projectId)
-                    .map(response -> {
-                        long duration = System.currentTimeMillis() - startTime;
-                        log.info("[API] GET /projects/{} 응답 완료 (200) - templateCode={}, status={}, duration={}ms", 
-                                projectId, response.templateCode(), response.status(), duration);
-                        return ResponseEntity.ok(response);
-                    })
-                    .orElseGet(() -> {
-                        long duration = System.currentTimeMillis() - startTime;
-                        log.warn("[API] GET /projects/{} 응답 완료 (404) - duration={}ms", projectId, duration);
-                        return ResponseEntity.notFound().build();
-                    });
-                    
-        } catch (Exception e) {
-            long duration = System.currentTimeMillis() - startTime;
-            log.error("[API] GET /projects/{} 요청 실패 (500) - duration={}ms", projectId, duration, e);
-            throw e;
-        }
+        return projectService.getProject(projectId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     /**
@@ -174,22 +118,9 @@ public class ProjectController {
                     content = @Content(schema = @Schema(implementation = ProjectResponse.class)))
     })
     public ResponseEntity<List<ProjectResponse>> getMyProjects() {
-        long startTime = System.currentTimeMillis();
-        log.info("[API] GET /projects 요청 수신");
-        
-        try {
-            List<ProjectResponse> projects = projectService.getMyProjects();
-            
-            long duration = System.currentTimeMillis() - startTime;
-            log.info("[API] GET /projects 응답 완료 - count={}, duration={}ms", projects.size(), duration);
-            
-            return ResponseEntity.ok(projects);
-            
-        } catch (Exception e) {
-            long duration = System.currentTimeMillis() - startTime;
-            log.error("[API] GET /projects 요청 실패 (500) - duration={}ms", duration, e);
-            throw e;
-        }
+        List<ProjectResponse> projects = projectService.getMyProjects();
+        log.debug("[Project] 프로젝트 목록 조회 완료 - count={}", projects.size());
+        return ResponseEntity.ok(projects);
     }
 }
 
