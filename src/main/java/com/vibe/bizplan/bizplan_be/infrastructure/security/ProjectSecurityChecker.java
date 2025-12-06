@@ -30,22 +30,25 @@ public class ProjectSecurityChecker {
      * @return 소유자 또는 ADMIN인 경우 true
      */
     public boolean isOwner(String projectId) {
+        log.debug("[Security] 프로젝트 소유권 확인 시작 - projectId={}", projectId);
+        
         // Null 체크: projectId가 null이면 접근 거부
         if (projectId == null) {
-            log.debug("프로젝트 접근 거부 - projectId가 null입니다");
+            log.debug("[Security] 프로젝트 접근 거부 - projectId가 null입니다");
             return false;
         }
         
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         
         if (authentication == null || !authentication.isAuthenticated()) {
-            log.debug("프로젝트 접근 거부 - 인증되지 않은 요청: projectId={}", projectId);
+            log.debug("[Security] 프로젝트 접근 거부 - 인증되지 않은 요청: projectId={}", projectId);
             return false;
         }
         
         Object principal = authentication.getPrincipal();
         if (!(principal instanceof User)) {
-            log.debug("프로젝트 접근 거부 - 잘못된 Principal 타입: projectId={}", projectId);
+            log.debug("[Security] 프로젝트 접근 거부 - 잘못된 Principal 타입: projectId={}, principalType={}", 
+                    projectId, principal != null ? principal.getClass().getSimpleName() : "null");
             return false;
         }
         
@@ -53,7 +56,7 @@ public class ProjectSecurityChecker {
         
         // ADMIN은 모든 프로젝트 접근 가능
         if (currentUser.getRole() == UserRole.ADMIN) {
-            log.debug("프로젝트 접근 허용 - ADMIN 권한: userId={}, projectId={}", 
+            log.debug("[Security] 프로젝트 접근 허용 - ADMIN 권한: userId={}, projectId={}", 
                     currentUser.getId(), projectId);
             return true;
         }
@@ -63,16 +66,16 @@ public class ProjectSecurityChecker {
                 .map(project -> {
                     boolean isOwner = project.getUserId().equals(currentUser.getId());
                     if (isOwner) {
-                        log.debug("프로젝트 접근 허용 - 소유자: userId={}, projectId={}", 
+                        log.debug("[Security] 프로젝트 접근 허용 - 소유자 확인됨: userId={}, projectId={}", 
                                 currentUser.getId(), projectId);
                     } else {
-                        log.warn("프로젝트 접근 거부 - 소유자 불일치: userId={}, projectId={}, ownerId={}", 
+                        log.warn("[Security] 프로젝트 접근 거부 - 소유자 불일치: requesterId={}, projectId={}, ownerId={}", 
                                 currentUser.getId(), projectId, project.getUserId());
                     }
                     return isOwner;
                 })
                 .orElseGet(() -> {
-                    log.debug("프로젝트 접근 - 프로젝트 없음: projectId={}", projectId);
+                    log.debug("[Security] 프로젝트 접근 통과 - 프로젝트 미존재 (404 처리는 서비스에서): projectId={}", projectId);
                     return true; // 프로젝트가 없으면 통과 (404 처리는 서비스에서)
                 });
     }
@@ -84,14 +87,19 @@ public class ProjectSecurityChecker {
      * @return 프로젝트 생성 가능 여부
      */
     public boolean canCreateProject() {
+        log.debug("[Security] 프로젝트 생성 권한 확인 시작");
+        
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         
         if (authentication == null || !authentication.isAuthenticated()) {
+            log.debug("[Security] 프로젝트 생성 거부 - 인증되지 않은 요청");
             return false;
         }
         
         Object principal = authentication.getPrincipal();
         if (!(principal instanceof User)) {
+            log.debug("[Security] 프로젝트 생성 거부 - 잘못된 Principal 타입: {}", 
+                    principal != null ? principal.getClass().getSimpleName() : "null");
             return false;
         }
         
@@ -99,6 +107,8 @@ public class ProjectSecurityChecker {
         
         // ADMIN/PREMIUM은 제한 없음
         if (currentUser.getRole() == UserRole.ADMIN || currentUser.getRole() == UserRole.PREMIUM) {
+            log.debug("[Security] 프로젝트 생성 허용 - {} 권한: userId={}", 
+                    currentUser.getRole(), currentUser.getId());
             return true;
         }
         
@@ -106,8 +116,11 @@ public class ProjectSecurityChecker {
         long projectCount = projectRepository.countByUserId(currentUser.getId());
         boolean canCreate = projectCount < 5;
         
-        if (!canCreate) {
-            log.warn("프로젝트 생성 제한 - 최대 개수 초과: userId={}, count={}", 
+        if (canCreate) {
+            log.debug("[Security] 프로젝트 생성 허용 - userId={}, 현재 프로젝트 수={}/5", 
+                    currentUser.getId(), projectCount);
+        } else {
+            log.warn("[Security] 프로젝트 생성 제한 - 최대 개수 초과: userId={}, count={}/5", 
                     currentUser.getId(), projectCount);
         }
         
@@ -123,14 +136,18 @@ public class ProjectSecurityChecker {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         
         if (authentication == null || !authentication.isAuthenticated()) {
+            log.trace("[Security] 현재 사용자 ID 조회 - 인증되지 않음");
             return null;
         }
         
         Object principal = authentication.getPrincipal();
         if (principal instanceof User user) {
+            log.trace("[Security] 현재 사용자 ID 조회 - userId={}", user.getId());
             return user.getId();
         }
         
+        log.trace("[Security] 현재 사용자 ID 조회 - 잘못된 Principal 타입: {}", 
+                principal != null ? principal.getClass().getSimpleName() : "null");
         return null;
     }
 }
