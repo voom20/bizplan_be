@@ -4,6 +4,7 @@ import com.vibe.bizplan.bizplan_be.domain.entity.Project;
 import com.vibe.bizplan.bizplan_be.domain.model.TemplateCode;
 import com.vibe.bizplan.bizplan_be.dto.request.CreateProjectRequest;
 import com.vibe.bizplan.bizplan_be.dto.response.ProjectResponse;
+import com.vibe.bizplan.bizplan_be.dto.response.ProjectResponseMapper;
 import com.vibe.bizplan.bizplan_be.infrastructure.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,7 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final TemplateService templateService;
+    private final ProjectResponseMapper projectResponseMapper;
 
     /** MVP용 기본 사용자 ID (인증 미구현) */
     private static final String DEFAULT_USER_ID = "default-user";
@@ -54,7 +56,7 @@ public class ProjectService {
         Project savedProject = projectRepository.save(project);
         log.info("프로젝트 생성 완료: id={}, templateCode={}", savedProject.getId(), savedProject.getTemplateCode());
         
-        return ProjectResponse.from(savedProject);
+        return projectResponseMapper.toResponse(savedProject);
     }
 
     /**
@@ -67,7 +69,7 @@ public class ProjectService {
     public Optional<ProjectResponse> getProject(String projectId) {
         log.debug("프로젝트 조회: id={}", projectId);
         return projectRepository.findById(projectId)
-                .map(ProjectResponse::from);
+                .map(projectResponseMapper::toResponse);
     }
 
     /**
@@ -79,9 +81,9 @@ public class ProjectService {
     @Transactional(readOnly = true)
     public List<ProjectResponse> getMyProjects() {
         log.debug("사용자 프로젝트 목록 조회: userId={}", DEFAULT_USER_ID);
-        return projectRepository.findByUserId(DEFAULT_USER_ID).stream()
-                .map(ProjectResponse::from)
-                .toList();
+        return projectResponseMapper.toResponseList(
+                projectRepository.findByUserId(DEFAULT_USER_ID)
+        );
     }
 
     /**
