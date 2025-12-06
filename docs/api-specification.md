@@ -9,7 +9,7 @@ BizPlan Backend REST API 명세서입니다.
 | Base URL | `http://localhost:8080` |
 | API Version | v1 |
 | Content-Type | `application/json` |
-| 인증 | MVP에서는 미구현 (추후 JWT) |
+| 인증 | JWT Bearer Token |
 | Swagger UI | `http://localhost:8080/swagger-ui.html` |
 | OpenAPI Spec | `http://localhost:8080/api-docs` |
 
@@ -17,20 +17,345 @@ BizPlan Backend REST API 명세서입니다.
 
 ## 목차
 
-1. [Projects API](#1-projects-api) - 프로젝트 관리
-2. [Wizard API](#2-wizard-api) - Wizard 답변 관리
-3. [Financials API](#3-financials-api) - 재무 추정
-4. [Business Plan Documents API](#4-business-plan-documents-api) - 사업계획서 생성
-5. [Export API](#5-export-api) - 문서 내보내기
-6. [Actuator API](#6-actuator-api) - 모니터링
+1. [Authentication API](#1-authentication-api) - 인증
+2. [Users API](#2-users-api) - 사용자 관리
+3. [Projects API](#3-projects-api) - 프로젝트 관리
+4. [Wizard API](#4-wizard-api) - Wizard 답변 관리
+5. [Financials API](#5-financials-api) - 재무 추정
+6. [Business Plan Documents API](#6-business-plan-documents-api) - 사업계획서 생성
+7. [Export API](#7-export-api) - 문서 내보내기
+8. [Actuator API](#8-actuator-api) - 모니터링
 
 ---
 
-## 1. Projects API
+## 1. Authentication API
+
+사용자 인증 및 토큰 관리
+
+### 1.1 회원가입
+
+신규 사용자를 등록합니다.
+
+```
+POST /auth/signup
+```
+
+**Request Body**
+
+```json
+{
+  "email": "user@example.com",
+  "password": "securePassword123",
+  "name": "홍길동"
+}
+```
+
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| email | string | ✅ | 이메일 (로그인 ID) |
+| password | string | ✅ | 비밀번호 (최소 8자) |
+| name | string | ❌ | 사용자 이름 |
+
+**Response 201**
+
+```json
+{
+  "userId": "550e8400-e29b-41d4-a716-446655440000",
+  "email": "user@example.com",
+  "name": "홍길동",
+  "role": "USER",
+  "createdAt": "2025-12-06T10:30:00"
+}
+```
+
+**Errors**
+
+| 상태코드 | 설명 |
+|----------|------|
+| 400 | 유효하지 않은 입력 (이메일 형식, 비밀번호 길이 등) |
+| 409 | 이미 존재하는 이메일 |
+
+---
+
+### 1.2 로그인
+
+사용자 인증 및 JWT 토큰 발급
+
+```
+POST /auth/login
+```
+
+**Request Body**
+
+```json
+{
+  "email": "user@example.com",
+  "password": "securePassword123"
+}
+```
+
+**Response 200**
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "tokenType": "Bearer",
+  "expiresIn": 3600,
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "email": "user@example.com",
+    "name": "홍길동",
+    "role": "USER"
+  }
+}
+```
+
+**Errors**
+
+| 상태코드 | 설명 |
+|----------|------|
+| 401 | 인증 실패 (잘못된 이메일/비밀번호) |
+
+---
+
+### 1.3 토큰 갱신
+
+Refresh Token으로 새 Access Token 발급
+
+```
+POST /auth/refresh
+```
+
+**Request Body**
+
+```json
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Response 200**
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "tokenType": "Bearer",
+  "expiresIn": 3600
+}
+```
+
+**Errors**
+
+| 상태코드 | 설명 |
+|----------|------|
+| 401 | 유효하지 않거나 만료된 Refresh Token |
+
+---
+
+### 1.4 로그아웃
+
+현재 세션 종료 (토큰 무효화)
+
+```
+POST /auth/logout
+```
+
+**Headers**
+
+```
+Authorization: Bearer {accessToken}
+```
+
+**Response 200**
+
+```json
+{
+  "message": "로그아웃 되었습니다"
+}
+```
+
+---
+
+## 2. Users API
+
+사용자 프로필 관리
+
+### 2.1 내 프로필 조회
+
+현재 로그인한 사용자의 프로필 정보를 조회합니다.
+
+```
+GET /users/me
+```
+
+**Headers**
+
+```
+Authorization: Bearer {accessToken}
+```
+
+**Response 200**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "email": "user@example.com",
+  "name": "홍길동",
+  "companyName": "스타트업 주식회사",
+  "phone": "010-1234-5678",
+  "role": "일반 사용자",
+  "lastLoginAt": "2025-12-06T10:30:00",
+  "createdAt": "2025-12-01T09:00:00"
+}
+```
+
+**Errors**
+
+| 상태코드 | 설명 |
+|----------|------|
+| 401 | 인증되지 않은 요청 |
+| 404 | 사용자를 찾을 수 없음 |
+
+---
+
+### 2.2 프로필 수정
+
+사용자 프로필 정보를 수정합니다.
+
+```
+PUT /users/me
+```
+
+**Headers**
+
+```
+Authorization: Bearer {accessToken}
+```
+
+**Request Body**
+
+```json
+{
+  "name": "홍길동",
+  "companyName": "새로운 회사명",
+  "phone": "010-9999-8888"
+}
+```
+
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| name | string | ❌ | 이름 (최대 100자) |
+| companyName | string | ❌ | 회사명 (최대 200자) |
+| phone | string | ❌ | 연락처 (최대 20자) |
+
+**Response 200**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "email": "user@example.com",
+  "name": "홍길동",
+  "companyName": "새로운 회사명",
+  "phone": "010-9999-8888",
+  "role": "일반 사용자",
+  "lastLoginAt": "2025-12-06T10:30:00",
+  "createdAt": "2025-12-01T09:00:00"
+}
+```
+
+---
+
+### 2.3 비밀번호 변경
+
+사용자 비밀번호를 변경합니다.
+
+```
+PUT /users/me/password
+```
+
+**Headers**
+
+```
+Authorization: Bearer {accessToken}
+```
+
+**Request Body**
+
+```json
+{
+  "currentPassword": "currentPassword123",
+  "newPassword": "newSecurePassword456",
+  "newPasswordConfirm": "newSecurePassword456"
+}
+```
+
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| currentPassword | string | ✅ | 현재 비밀번호 |
+| newPassword | string | ✅ | 새 비밀번호 (최소 8자) |
+| newPasswordConfirm | string | ✅ | 새 비밀번호 확인 |
+
+**Response 200**
+
+```json
+{
+  "message": "비밀번호가 변경되었습니다"
+}
+```
+
+**Errors**
+
+| 상태코드 | 설명 |
+|----------|------|
+| 400 | 현재 비밀번호 불일치 또는 새 비밀번호 확인 불일치 |
+
+---
+
+### 2.4 회원 탈퇴
+
+사용자 계정을 삭제합니다 (소프트 삭제).
+
+```
+DELETE /users/me
+```
+
+**Headers**
+
+```
+Authorization: Bearer {accessToken}
+```
+
+**Request Body**
+
+```json
+{
+  "password": "currentPassword123"
+}
+```
+
+**Response 200**
+
+```json
+{
+  "message": "회원 탈퇴가 완료되었습니다"
+}
+```
+
+**Errors**
+
+| 상태코드 | 설명 |
+|----------|------|
+| 400 | 비밀번호 불일치 |
+
+---
+
+## 3. Projects API
 
 사업계획서 프로젝트 생성 및 관리
 
-### 1.1 템플릿 목록 조회
+### 3.1 템플릿 목록 조회
 
 사용 가능한 사업계획서 템플릿 목록을 반환합니다.
 
@@ -77,7 +402,7 @@ GET /projects/templates
 
 ---
 
-### 1.2 프로젝트 생성
+### 3.2 프로젝트 생성
 
 새 사업계획서 프로젝트를 생성합니다.
 
@@ -121,7 +446,7 @@ POST /projects
 
 ---
 
-### 1.3 프로젝트 조회
+### 3.3 프로젝트 조회
 
 특정 프로젝트의 상세 정보를 조회합니다.
 
@@ -161,7 +486,7 @@ GET /projects/{projectId}
 
 ---
 
-### 1.4 내 프로젝트 목록
+### 3.4 내 프로젝트 목록
 
 현재 사용자의 프로젝트 목록을 조회합니다.
 
@@ -187,11 +512,11 @@ GET /projects
 
 ---
 
-## 2. Wizard API
+## 4. Wizard API
 
 Wizard 단계별 답변 저장 및 조회
 
-### 2.1 답변 저장
+### 4.1 답변 저장
 
 특정 단계의 답변을 저장합니다. 기존 답변과 병합됩니다.
 
@@ -247,7 +572,7 @@ POST /projects/{projectId}/wizard/steps
 
 ---
 
-### 2.2 전체 답변 조회
+### 4.2 전체 답변 조회
 
 프로젝트의 모든 Wizard 답변을 조회합니다.
 
@@ -272,7 +597,7 @@ GET /projects/{projectId}/wizard/answers
 
 ---
 
-### 2.3 단계별 답변 조회
+### 4.3 단계별 답변 조회
 
 특정 단계의 답변만 조회합니다.
 
@@ -298,11 +623,11 @@ GET /projects/{projectId}/wizard/steps/{stepId}
 
 ---
 
-## 3. Financials API
+## 5. Financials API
 
 재무 추정 및 유닛 이코노믹스 계산
 
-### 3.1 재무 추정 생성 (프로젝트 연동)
+### 5.1 재무 추정 생성 (프로젝트 연동)
 
 프로젝트에 연동된 재무 추정을 생성합니다.
 
@@ -389,7 +714,7 @@ POST /projects/{projectId}/financials/generate
 
 ---
 
-### 3.2 재무 추정 미리보기 (독립형)
+### 5.2 재무 추정 미리보기 (독립형)
 
 프로젝트 연동 없이 재무 추정 결과를 미리 확인합니다.
 
@@ -399,19 +724,19 @@ POST /financials/preview
 
 **Request Body**
 
-`3.1 재무 추정 생성`과 동일
+`5.1 재무 추정 생성`과 동일
 
 **Response 200**
 
-`3.1 재무 추정 생성`과 동일 (`projectId`가 `"preview"`로 설정됨)
+`5.1 재무 추정 생성`과 동일 (`projectId`가 `"preview"`로 설정됨)
 
 ---
 
-## 4. Business Plan Documents API
+## 6. Business Plan Documents API
 
 AI 기반 사업계획서 생성 및 관리
 
-### 4.1 사업계획서 전체 생성
+### 6.1 사업계획서 전체 생성
 
 Wizard 답변을 기반으로 AI가 사업계획서를 생성합니다.
 
@@ -461,7 +786,7 @@ POST /projects/{projectId}/documents/business-plan/generate
 
 ---
 
-### 4.2 섹션 재생성
+### 6.2 섹션 재생성
 
 기존 문서의 특정 섹션만 다시 생성합니다.
 
@@ -494,11 +819,11 @@ POST /projects/{projectId}/documents/{documentId}/sections/{sectionType}/regener
 
 **Response 200**
 
-`4.1 사업계획서 전체 생성`과 동일
+`6.1 사업계획서 전체 생성`과 동일
 
 ---
 
-### 4.3 최신 문서 조회
+### 6.3 최신 문서 조회
 
 프로젝트의 가장 최근 문서를 조회합니다.
 
@@ -508,7 +833,7 @@ GET /projects/{projectId}/documents/business-plan/latest
 
 **Response 200**
 
-`4.1 사업계획서 전체 생성`과 동일
+`6.1 사업계획서 전체 생성`과 동일
 
 **Errors**
 
@@ -518,7 +843,7 @@ GET /projects/{projectId}/documents/business-plan/latest
 
 ---
 
-### 4.4 특정 문서 조회
+### 6.4 특정 문서 조회
 
 문서 ID로 특정 문서를 조회합니다.
 
@@ -528,11 +853,11 @@ GET /projects/{projectId}/documents/{documentId}
 
 **Response 200**
 
-`4.1 사업계획서 전체 생성`과 동일
+`6.1 사업계획서 전체 생성`과 동일
 
 ---
 
-### 4.5 문서 버전 목록
+### 6.5 문서 버전 목록
 
 프로젝트의 모든 문서 버전을 조회합니다.
 
@@ -565,11 +890,11 @@ GET /projects/{projectId}/documents/business-plan/versions
 
 ---
 
-## 5. Export API
+## 7. Export API
 
 사업계획서 내보내기 (PDF/HTML)
 
-### 5.1 사업계획서 내보내기
+### 7.1 사업계획서 내보내기
 
 최신 버전의 문서를 다운로드합니다.
 
@@ -598,7 +923,7 @@ GET /projects/{projectId}/export
 
 ---
 
-### 5.2 특정 버전 내보내기
+### 7.2 특정 버전 내보내기
 
 지정된 버전의 문서를 다운로드합니다.
 
@@ -621,7 +946,7 @@ GET /projects/{projectId}/export/versions/{version}
 
 ---
 
-### 5.3 지원 형식 목록
+### 7.3 지원 형식 목록
 
 사용 가능한 내보내기 형식을 반환합니다.
 
@@ -641,11 +966,11 @@ GET /projects/{projectId}/export/formats
 
 ---
 
-## 6. Actuator API
+## 8. Actuator API
 
 애플리케이션 모니터링
 
-### 6.1 Health Check
+### 8.1 Health Check
 
 ```
 GET /actuator/health
@@ -661,7 +986,7 @@ GET /actuator/health
 
 ---
 
-### 6.2 Prometheus Metrics
+### 8.2 Prometheus Metrics
 
 ```
 GET /actuator/prometheus
@@ -744,9 +1069,30 @@ MVP에서는 Rate Limit을 적용하지 않습니다.
 
 ---
 
+## ENUM 정의 (추가)
+
+### UserRole
+
+| 값 | 권한 | 설명 |
+|----|------|------|
+| USER | ROLE_USER | 일반 사용자 (프로젝트 5개 제한) |
+| PREMIUM | ROLE_PREMIUM | 프리미엄 사용자 (무제한) |
+| ADMIN | ROLE_ADMIN | 관리자 (모든 권한) |
+
+### UserStatus
+
+| 값 | 설명 |
+|----|------|
+| ACTIVE | 활성 상태 |
+| SUSPENDED | 정지 상태 |
+| DELETED | 삭제 상태 (소프트 삭제) |
+
+---
+
 ## Changelog
 
 | 버전 | 날짜 | 변경사항 |
 |------|------|----------|
+| 1.1.0 | 2025-12-06 | Authentication/Users API 추가, JWT 인증 적용 |
 | 1.0.0 | 2025-12-06 | 초기 버전 |
 

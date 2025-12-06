@@ -26,13 +26,13 @@
 ║             ██║     ██║  ██║███████║███████║███████╗██████╔╝                     ║
 ║             ╚═╝     ╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝╚═════╝                      ║
 ║                                                                                  ║
-║                          ✅ ALL 90 TESTS PASSED ✅                               ║
+║                          ✅ ALL 127 TESTS PASSED ✅                              ║
 ║                                                                                  ║
 ╠══════════════════════════════════════════════════════════════════════════════════╣
 ║                                                                                  ║
 ║     ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ║
 ║     │             │    │             │    │             │    │             │    ║
-║     │     90      │    │      0      │    │      0      │    │   0.859s    │    ║
+║     │    127      │    │      0      │    │      0      │    │   1.2s      │    ║
 ║     │   TESTS     │    │  FAILURES   │    │  IGNORED    │    │  DURATION   │    ║
 ║     │     ✅      │    │     ✅      │    │     ✅      │    │     ✅      │    ║
 ║     │             │    │             │    │             │    │             │    ║
@@ -69,6 +69,8 @@
 | **REQ-FUNC-011** | HWP/PDF 내보내기 | TC-FUNC-011 | `DocumentExportServiceTest` | 18 | 🟢 PASS |
 | **REQ-FUNC-012** | 재무 자동화 엔진 | TC-FUNC-012 | `FinancialCalculationServiceTest` | 21 | 🟢 PASS |
 | **REQ-FUNC-013** | 자동 저장 | TC-FUNC-013 | `ProjectServiceTest` | 12 | 🟢 PASS |
+| **REQ-FUNC-AUTH** | 사용자 인증 | TC-FUNC-AUTH | `UserServiceTest` | 18 | 🟢 PASS |
+| **REQ-NF-RBAC** | 프로젝트 접근 제어 | TC-NF-RBAC | `ProjectSecurityCheckerTest` | 19 | 🟢 PASS |
 | **API 검증** | REST API 엔드포인트 | TC-INT-001 | `ProjectControllerIntegrationTest` | 10 | 🟢 PASS |
 
 ### 요구사항별 상세 매핑
@@ -190,8 +192,25 @@
 │     ├─ GenerateFileNameTest .............................. 8 tests   0.021s │
 │     └─ ExportFormatTest .................................. 2 tests   0.218s │
 │                                                                              │
+│  🟢 UserServiceTest                                                          │
+│     ├─ GetProfileTest .................................... 5 tests   0.003s │
+│     ├─ UpdateProfileTest ................................. 4 tests   0.002s │
+│     ├─ ChangePasswordTest ................................ 4 tests   0.002s │
+│     ├─ DeleteAccountTest ................................. 4 tests   0.001s │
+│     └─ ProfileResponseValidationTest ..................... 3 tests   0.001s │
+│                                                                              │
+│  🟢 ProjectSecurityCheckerTest                                               │
+│     ├─ IsOwnerTest ....................................... 7 tests   0.003s │
+│     ├─ CanCreateProjectTest .............................. 8 tests   0.002s │
+│     └─ GetCurrentUserIdTest .............................. 4 tests   0.001s │
+│                                                                              │
+│  🟢 ProjectSecurityCheckerIntegrationTest                                    │
+│     ├─ IsOwnerIntegrationTest ............................ 4 tests   0.045s │
+│     ├─ CanCreateProjectIntegrationTest ................... 4 tests   0.032s │
+│     └─ ComplexScenarioTest ............................... 2 tests   0.028s │
+│                                                                              │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│  TOTAL: 90 tests | 0 failures | 0 ignored | 0.859s                           │
+│  TOTAL: 127 tests | 0 failures | 0 ignored | 1.2s                            │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -208,9 +227,10 @@
 │  │    ─────────────────────────────────────────────────────────────────   │  │
 │  │    🟢 com.vibe.bizplan.bizplan_be              1     0     0   0.225s  │  │
 │  │    🟢 com.vibe.bizplan.bizplan_be.api         10     0     0   0.192s  │  │
-│  │    🟢 com.vibe.bizplan.bizplan_be.domain      79     0     0   0.442s  │  │
+│  │    🟢 com.vibe.bizplan.bizplan_be.domain      97     0     0   0.550s  │  │
+│  │    🟢 com.vibe.bizplan.bizplan_be.infra       19     0     0   0.233s  │  │
 │  │    ─────────────────────────────────────────────────────────────────   │  │
-│  │    TOTAL                                      90     0     0   0.859s  │  │
+│  │    TOTAL                                     127     0     0   1.200s  │  │
 │  │                                                                        │  │
 │  └────────────────────────────────────────────────────────────────────────┘  │
 │                                                                              │
@@ -234,10 +254,13 @@
 - [x] WizardServiceTest (12개) - **PASS**
 - [x] FinancialCalculationServiceTest (21개) - **PASS**
 - [x] DocumentExportServiceTest (18개) - **PASS**
+- [x] UserServiceTest (18개) - **PASS** ⭐ NEW
+- [x] ProjectSecurityCheckerTest (19개) - **PASS** ⭐ NEW
 
 ### 통합 테스트 (Integration Tests)
 
 - [x] ProjectControllerIntegrationTest (10개) - **PASS**
+- [x] ProjectSecurityCheckerIntegrationTest (10개) - **PASS** ⭐ NEW
 
 ### 애플리케이션 컨텍스트 테스트
 
@@ -262,8 +285,8 @@
 ║   │   브랜치:        develop (PR #31 머지 완료)                        │    ║
 ║   │   커밋 해시:     067908a                                           │    ║
 ║   │                                                                    │    ║
-║   │   테스트 수:     90개                                              │    ║
-║   │   통과:          90개                                              │    ║
+║   │   테스트 수:     127개                                             │    ║
+║   │   통과:          127개                                             │    ║
 ║   │   실패:          0개                                               │    ║
 ║   │   무시:          0개                                               │    ║
 ║   │                                                                    │    ║
