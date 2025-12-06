@@ -14,9 +14,12 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import org.springframework.lang.NonNull;
+
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -99,17 +102,18 @@ public class User implements UserDetails {
      * @param email 이메일
      * @param passwordHash BCrypt 해시된 비밀번호
      * @param name 이름 (선택)
-     * @return 생성된 User 인스턴스
+     * @return 생성된 User 인스턴스 (non-null 보장)
      */
+    @NonNull
     public static User create(String email, String passwordHash, String name) {
-        return User.builder()
+        return Objects.requireNonNull(User.builder()
                 .id(UUID.randomUUID().toString())
                 .email(email)
                 .passwordHash(passwordHash)
                 .name(name)
                 .role(UserRole.USER)
                 .status(UserStatus.ACTIVE)
-                .build();
+                .build());
     }
 
     // ============================================

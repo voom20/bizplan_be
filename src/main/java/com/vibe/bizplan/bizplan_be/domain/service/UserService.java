@@ -129,9 +129,10 @@ public class UserService {
      * @param userId 사용자 ID
      * @return 사용자 엔티티
      * @throws UserNotFoundException 사용자를 찾을 수 없거나 비활성 상태인 경우
+     * @throws IllegalArgumentException userId가 null인 경우
      */
     private User findActiveUser(String userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findById(java.util.Objects.requireNonNull(userId, "userId must not be null"))
                 .orElseThrow(() -> {
                     log.warn("사용자 조회 실패 - 사용자 없음: userId={}", userId);
                     return new UserNotFoundException(userId);
