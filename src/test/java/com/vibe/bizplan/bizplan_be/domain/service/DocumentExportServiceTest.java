@@ -2,6 +2,8 @@ package com.vibe.bizplan.bizplan_be.domain.service;
 
 import com.vibe.bizplan.bizplan_be.domain.entity.BusinessPlanDocument;
 import com.vibe.bizplan.bizplan_be.domain.entity.Project;
+import com.vibe.bizplan.bizplan_be.domain.exception.DocumentNotFoundException;
+import com.vibe.bizplan.bizplan_be.domain.exception.ProjectNotFoundException;
 import com.vibe.bizplan.bizplan_be.domain.model.ExportFormat;
 import com.vibe.bizplan.bizplan_be.domain.model.ProjectStatus;
 import com.vibe.bizplan.bizplan_be.domain.model.TemplateCode;
@@ -123,19 +125,19 @@ class DocumentExportServiceTest {
 
         @Test
         @DisplayName("존재하지 않는 프로젝트 ID로 내보내기 시 예외 발생")
-        void exportDocument_WithNonExistingProjectId_ThrowsIllegalArgumentException() {
+        void exportDocument_WithNonExistingProjectId_ThrowsProjectNotFoundException() {
             // given
             given(projectRepository.findById("non-existing-id")).willReturn(Optional.empty());
 
             // when & then
             assertThatThrownBy(() -> documentExportService.exportDocument("non-existing-id", ExportFormat.PDF))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("프로젝트를 찾을 수 없습니다");
+                    .isInstanceOf(ProjectNotFoundException.class)
+                    .hasMessageContaining("프로젝트");
         }
 
         @Test
         @DisplayName("생성된 문서가 없는 경우 예외 발생")
-        void exportDocument_WithNoDocument_ThrowsIllegalStateException() {
+        void exportDocument_WithNoDocument_ThrowsDocumentNotFoundException() {
             // given
             given(projectRepository.findById("test-project-id")).willReturn(Optional.of(testProject));
             given(documentRepository.findFirstByProjectIdOrderByVersionDesc("test-project-id"))
@@ -143,8 +145,8 @@ class DocumentExportServiceTest {
 
             // when & then
             assertThatThrownBy(() -> documentExportService.exportDocument("test-project-id", ExportFormat.PDF))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("생성된 사업계획서가 없습니다");
+                    .isInstanceOf(DocumentNotFoundException.class)
+                    .hasMessageContaining("문서");
         }
     }
 
@@ -173,7 +175,7 @@ class DocumentExportServiceTest {
 
         @Test
         @DisplayName("존재하지 않는 버전 요청 시 예외 발생")
-        void exportDocumentVersion_WithNonExistingVersion_ThrowsIllegalArgumentException() {
+        void exportDocumentVersion_WithNonExistingVersion_ThrowsDocumentNotFoundException() {
             // given
             given(projectRepository.findById("test-project-id")).willReturn(Optional.of(testProject));
             given(documentRepository.findByProjectIdAndVersion("test-project-id", 999))
@@ -181,8 +183,8 @@ class DocumentExportServiceTest {
 
             // when & then
             assertThatThrownBy(() -> documentExportService.exportDocumentVersion("test-project-id", 999, ExportFormat.PDF))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("해당 버전의 문서를 찾을 수 없습니다");
+                    .isInstanceOf(DocumentNotFoundException.class)
+                    .hasMessageContaining("버전");
         }
 
         @Test

@@ -153,18 +153,18 @@ class ExportControllerIntegrationTest {
             mockMvc.perform(get("/projects/{projectId}/export", "non-existing-id")
                             .param("format", "pdf"))
                     .andDo(print())
-                    .andExpect(status().isBadRequest());
+                    .andExpect(status().isNotFound());
         }
 
         @Test
         @WithMockUser
-        @DisplayName("문서가 없는 프로젝트 내보내기 시 에러")
-        void exportDocument_NoDocument_ReturnsError() throws Exception {
+        @DisplayName("문서가 없는 프로젝트 내보내기 시 404")
+        void exportDocument_NoDocument_Returns404() throws Exception {
             // when & then - 문서 생성 없이 내보내기 시도
             mockMvc.perform(get("/projects/{projectId}/export", testProjectId)
                             .param("format", "pdf"))
                     .andDo(print())
-                    .andExpect(status().is5xxServerError());
+                    .andExpect(status().isNotFound());
         }
 
         @Test
@@ -204,8 +204,8 @@ class ExportControllerIntegrationTest {
 
         @Test
         @WithMockUser
-        @DisplayName("존재하지 않는 버전 요청 시 에러")
-        void exportDocumentVersion_NonExistingVersion_ReturnsError() throws Exception {
+        @DisplayName("존재하지 않는 버전 요청 시 404")
+        void exportDocumentVersion_NonExistingVersion_Returns404() throws Exception {
             // given
             createTestDocument();
 
@@ -213,7 +213,7 @@ class ExportControllerIntegrationTest {
             mockMvc.perform(get("/projects/{projectId}/export/versions/{version}", testProjectId, 999)
                             .param("format", "pdf"))
                     .andDo(print())
-                    .andExpect(status().isBadRequest());
+                    .andExpect(status().isNotFound());
         }
     }
 

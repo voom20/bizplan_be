@@ -174,7 +174,7 @@ class WizardControllerIntegrationTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andDo(print())
-                    .andExpect(status().isBadRequest());
+                    .andExpect(status().isNotFound());
         }
 
         @Test
@@ -263,7 +263,7 @@ class WizardControllerIntegrationTest {
             // when & then
             mockMvc.perform(get("/projects/{projectId}/wizard/answers", "non-existing-id"))
                     .andDo(print())
-                    .andExpect(status().isBadRequest());
+                    .andExpect(status().isNotFound());
         }
     }
 
@@ -310,7 +310,7 @@ class WizardControllerIntegrationTest {
             // when & then
             mockMvc.perform(get("/projects/{projectId}/wizard/steps/{stepId}", "non-existing-id", "step1"))
                     .andDo(print())
-                    .andExpect(status().isBadRequest());
+                    .andExpect(status().isNotFound());
         }
     }
 
