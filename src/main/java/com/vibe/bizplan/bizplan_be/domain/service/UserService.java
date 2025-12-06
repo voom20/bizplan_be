@@ -36,9 +36,11 @@ public class UserService {
      */
     @Transactional(readOnly = true)
     public UserProfileResponse getProfile(String userId) {
-        log.debug("프로필 조회 - userId={}", userId);
+        log.debug("[User] 프로필 조회 시작 - userId={}", userId);
         
         User user = findActiveUser(userId);
+        
+        log.debug("[User] 프로필 조회 완료 - userId={}, email={}", userId, user.getEmail());
         return UserProfileResponse.from(user);
     }
 
@@ -52,13 +54,21 @@ public class UserService {
      */
     @Transactional
     public UserProfileResponse updateProfile(String userId, UpdateProfileRequest request) {
-        log.info("프로필 수정 시도 - userId={}", userId);
+        log.info("[User] 프로필 수정 시작 - userId={}", userId);
         
         User user = findActiveUser(userId);
+        
+        log.debug("[User] 프로필 수정 전 - name={}, companyName={}, phone={}", 
+                user.getName(), user.getCompanyName(), user.getPhone());
+        
         user.updateProfile(request.name(), request.companyName(), request.phone());
         User savedUser = userRepository.save(user);
         
-        log.info("프로필 수정 완료 - userId={}", userId);
+        log.info("[User] 프로필 수정 완료 - userId={}, 변경항목=[name={}, companyName={}, phone={}]", 
+                userId, 
+                request.name() != null ? "수정됨" : "유지",
+                request.companyName() != null ? "수정됨" : "유지",
+                request.phone() != null ? "수정됨" : "유지");
         return UserProfileResponse.from(savedUser);
     }
 
@@ -72,19 +82,20 @@ public class UserService {
      */
     @Transactional
     public void changePassword(String userId, ChangePasswordRequest request) {
-        log.info("비밀번호 변경 시도 - userId={}", userId);
+        log.info("[User] 비밀번호 변경 시작 - userId={}", userId);
         
         User user = findActiveUser(userId);
         
         // 현재 비밀번호 확인
         if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
-            log.warn("비밀번호 변경 실패 - 현재 비밀번호 불일치: userId={}", userId);
+            log.warn("[User] 비밀번호 변경 실패 - 현재 비밀번호 불일치: userId={}, email={}", 
+                    userId, user.getEmail());
             throw PasswordMismatchException.currentPasswordMismatch();
         }
         
         // 새 비밀번호 확인
         if (!request.newPassword().equals(request.newPasswordConfirm())) {
-            log.warn("비밀번호 변경 실패 - 새 비밀번호 확인 불일치: userId={}", userId);
+            log.warn("[User] 비밀번호 변경 실패 - 새 비밀번호 확인 불일치: userId={}", userId);
             throw PasswordMismatchException.newPasswordConfirmMismatch();
         }
         
@@ -93,7 +104,7 @@ public class UserService {
         user.changePassword(encodedPassword);
         userRepository.save(user);
         
-        log.info("비밀번호 변경 완료 - userId={}", userId);
+        log.info("[User] 비밀번호 변경 완료 - userId={}, email={}", userId, user.getEmail());
     }
 
     /**
@@ -106,13 +117,14 @@ public class UserService {
      */
     @Transactional
     public void deleteAccount(String userId, DeleteAccountRequest request) {
-        log.info("회원 탈퇴 시도 - userId={}", userId);
+        log.info("[User] 회원 탈퇴 시작 - userId={}", userId);
         
         User user = findActiveUser(userId);
+        String userEmail = user.getEmail();
         
         // 비밀번호 확인
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            log.warn("회원 탈퇴 실패 - 비밀번호 불일치: userId={}", userId);
+            log.warn("[User] 회원 탈퇴 실패 - 비밀번호 불일치: userId={}, email={}", userId, userEmail);
             throw PasswordMismatchException.currentPasswordMismatch();
         }
         
@@ -120,7 +132,7 @@ public class UserService {
         user.changeStatus(UserStatus.DELETED);
         userRepository.save(user);
         
-        log.info("회원 탈퇴 완료 - userId={}", userId);
+        log.info("[User] 회원 탈퇴 완료 - userId={}, email={} (소프트 삭제 처리됨)", userId, userEmail);
     }
 
     /**
@@ -132,17 +144,21 @@ public class UserService {
      * @throws IllegalArgumentException userId가 null인 경우
      */
     private User findActiveUser(String userId) {
+        log.trace("[User] 활성 사용자 조회 - userId={}", userId);
+        
         User user = userRepository.findById(java.util.Objects.requireNonNull(userId, "userId must not be null"))
                 .orElseThrow(() -> {
-                    log.warn("사용자 조회 실패 - 사용자 없음: userId={}", userId);
+                    log.warn("[User] 사용자 조회 실패 - 존재하지 않는 사용자: userId={}", userId);
                     return new UserNotFoundException(userId);
                 });
         
         if (user.getStatus() != UserStatus.ACTIVE) {
-            log.warn("사용자 조회 실패 - 비활성 상태: userId={}, status={}", userId, user.getStatus());
+            log.warn("[User] 사용자 조회 실패 - 비활성 상태: userId={}, email={}, status={}", 
+                    userId, user.getEmail(), user.getStatus());
             throw new UserNotFoundException(userId);
         }
         
+        log.trace("[User] 활성 사용자 조회 완료 - userId={}, email={}", userId, user.getEmail());
         return user;
     }
 }
