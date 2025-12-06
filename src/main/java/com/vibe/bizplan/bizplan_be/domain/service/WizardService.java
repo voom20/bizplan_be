@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Wizard 서비스.
@@ -32,12 +33,14 @@ public class WizardService {
      * Wizard 답변 저장 (Upsert).
      * 기존 답변에 새로운 답변을 병합하여 저장한다.
      *
-     * @param projectId 프로젝트 ID
-     * @param request 답변 저장 요청
+     * @param projectId 프로젝트 ID (null 불가)
+     * @param request 답변 저장 요청 (null 불가)
      * @return 업데이트된 전체 답변
      */
     @Transactional
     public WizardAnswersResponse saveAnswers(String projectId, SaveWizardAnswersRequest request) {
+        Objects.requireNonNull(projectId, "프로젝트 ID는 필수입니다");
+        Objects.requireNonNull(request, "요청 데이터는 필수입니다");
         log.info("Wizard 답변 저장: projectId={}, stepId={}", projectId, request.stepId());
         
         Project project = projectRepository.findById(projectId)
@@ -60,19 +63,20 @@ public class WizardService {
         }
         
         projectRepository.save(project);
-        log.info("Wizard 답변 저장 완료: projectId={}, totalSteps={}", projectId, existingAnswers.size());
+        log.info("Wizard 답변 저장 완료: projectId={}, completedSteps={}", projectId, existingAnswers.size());
         
-        return WizardAnswersResponse.of(projectId, existingAnswers);
+        return WizardAnswersResponse.of(projectId, existingAnswers, project.getTemplateCode());
     }
 
     /**
      * Wizard 전체 답변 조회.
      *
-     * @param projectId 프로젝트 ID
+     * @param projectId 프로젝트 ID (null 불가)
      * @return 전체 답변 데이터
      */
     @Transactional(readOnly = true)
     public WizardAnswersResponse getAnswers(String projectId) {
+        Objects.requireNonNull(projectId, "프로젝트 ID는 필수입니다");
         log.debug("Wizard 답변 조회: projectId={}", projectId);
         
         Project project = projectRepository.findById(projectId)
@@ -80,19 +84,21 @@ public class WizardService {
         
         Map<String, Object> answers = parseAnswers(project.getWizardAnswers());
         
-        return WizardAnswersResponse.of(projectId, answers);
+        return WizardAnswersResponse.of(projectId, answers, project.getTemplateCode());
     }
 
     /**
      * 특정 단계의 답변만 조회.
      *
-     * @param projectId 프로젝트 ID
-     * @param stepId 단계 ID
+     * @param projectId 프로젝트 ID (null 불가)
+     * @param stepId 단계 ID (null 불가)
      * @return 해당 단계의 답변 (없으면 빈 Map)
      */
     @Transactional(readOnly = true)
     @SuppressWarnings("unchecked")
     public Map<String, Object> getStepAnswers(String projectId, String stepId) {
+        Objects.requireNonNull(projectId, "프로젝트 ID는 필수입니다");
+        Objects.requireNonNull(stepId, "단계 ID는 필수입니다");
         log.debug("특정 단계 답변 조회: projectId={}, stepId={}", projectId, stepId);
         
         Project project = projectRepository.findById(projectId)

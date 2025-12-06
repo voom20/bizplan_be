@@ -48,11 +48,13 @@ public class BusinessPlanOrchestrationService {
      * 사업계획서 전체 생성.
      * 모든 섹션을 순차적으로 생성하여 하나의 문서로 저장한다.
      *
-     * @param projectId 프로젝트 ID
+     * @param projectId 프로젝트 ID (null 불가)
      * @return 생성된 문서
      */
+    @SuppressWarnings("null") // Spring Data save() 메서드의 null-safety 분석 오탐 억제
     @Transactional
     public BusinessPlanDocument generateFullDocument(String projectId) {
+        Objects.requireNonNull(projectId, "프로젝트 ID는 필수입니다");
         log.info("사업계획서 전체 생성 시작: projectId={}", projectId);
         long startTime = System.currentTimeMillis();
 
@@ -68,8 +70,9 @@ public class BusinessPlanOrchestrationService {
 
         // 3. 새 문서 생성
         int nextVersion = documentRepository.findMaxVersionByProjectId(projectId) + 1;
-        BusinessPlanDocument document = BusinessPlanDocument.createNew(projectId, nextVersion);
-        document = documentRepository.save(document);
+        BusinessPlanDocument newDocument = BusinessPlanDocument.createNew(projectId, nextVersion);
+        BusinessPlanDocument document = Objects.requireNonNull(
+                documentRepository.save(newDocument), "문서 저장 실패");
 
         // 4. 섹션별 생성 (순차적)
         String templateCode = project.getTemplateCode().name();
@@ -117,12 +120,14 @@ public class BusinessPlanOrchestrationService {
     /**
      * 단일 섹션 생성 (재생성용).
      *
-     * @param documentId 문서 ID
-     * @param sectionType 섹션 타입
+     * @param documentId 문서 ID (null 불가)
+     * @param sectionType 섹션 타입 (null 불가)
      * @return 업데이트된 문서
      */
     @Transactional
     public BusinessPlanDocument regenerateSection(String documentId, String sectionType) {
+        Objects.requireNonNull(documentId, "문서 ID는 필수입니다");
+        Objects.requireNonNull(sectionType, "섹션 타입은 필수입니다");
         log.info("섹션 재생성: documentId={}, section={}", documentId, sectionType);
 
         // 1. 문서 조회
@@ -130,7 +135,8 @@ public class BusinessPlanOrchestrationService {
                 .orElseThrow(() -> new IllegalArgumentException("문서를 찾을 수 없습니다: " + documentId));
 
         // 2. 프로젝트 조회
-        Project project = projectRepository.findById(document.getProjectId())
+        String projectId = Objects.requireNonNull(document.getProjectId(), "문서에 프로젝트 ID가 없습니다");
+        Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new IllegalArgumentException("프로젝트를 찾을 수 없습니다"));
 
         // 3. 컨텍스트 및 이전 섹션 준비
@@ -166,8 +172,12 @@ public class BusinessPlanOrchestrationService {
 
     /**
      * 문서 ID로 조회.
+     *
+     * @param documentId 문서 ID (null 불가)
+     * @return 문서 (Optional)
      */
     public Optional<BusinessPlanDocument> getDocument(String documentId) {
+        Objects.requireNonNull(documentId, "문서 ID는 필수입니다");
         return documentRepository.findById(documentId);
     }
 
@@ -191,7 +201,7 @@ public class BusinessPlanOrchestrationService {
         }
         try {
             return objectMapper.readValue(wizardAnswersJson, new TypeReference<Map<String, Object>>() {});
-        } catch (Exception e) {
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             log.warn("Wizard 답변 파싱 실패: {}", e.getMessage());
             return Collections.emptyMap();
         }

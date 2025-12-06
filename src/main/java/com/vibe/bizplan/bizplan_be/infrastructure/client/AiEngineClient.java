@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
-import java.time.Duration;
+import java.util.Objects;
 
 /**
  * AI Engine (Python FastAPI) HTTP 클라이언트.
@@ -20,13 +20,18 @@ import java.time.Duration;
 public class AiEngineClient {
 
     private final RestClient restClient;
-    private final String aiEngineUrl;
 
+    /**
+     * AI Engine 클라이언트 생성자.
+     *
+     * @param aiEngineUrl AI 엔진 URL (null 불가)
+     * @param timeoutSeconds 타임아웃 (초)
+     */
     public AiEngineClient(
             @Value("${ai.engine.url:http://localhost:8000}") String aiEngineUrl,
             @Value("${ai.engine.timeout:60}") int timeoutSeconds
     ) {
-        this.aiEngineUrl = aiEngineUrl;
+        Objects.requireNonNull(aiEngineUrl, "AI 엔진 URL은 필수입니다");
         this.restClient = RestClient.builder()
                 .baseUrl(aiEngineUrl)
                 .defaultHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
@@ -47,6 +52,7 @@ public class AiEngineClient {
                 request.projectId(), request.sectionType());
         
         try {
+            @SuppressWarnings("null") // MediaType.APPLICATION_JSON은 항상 non-null
             BizPlanGenerateResponse response = restClient.post()
                     .uri("/api/v1/bizplan/generate")
                     .contentType(MediaType.APPLICATION_JSON)

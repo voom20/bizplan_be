@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * 문서 내보내기 서비스.
@@ -35,11 +36,13 @@ public class DocumentExportService {
     /**
      * 사업계획서를 지정된 포맷으로 내보내기.
      *
-     * @param projectId 프로젝트 ID
-     * @param format 출력 포맷
+     * @param projectId 프로젝트 ID (null 불가)
+     * @param format 출력 포맷 (null 불가)
      * @return 파일 바이트 배열
      */
     public byte[] exportDocument(String projectId, ExportFormat format) {
+        Objects.requireNonNull(projectId, "프로젝트 ID는 필수입니다");
+        Objects.requireNonNull(format, "출력 포맷은 필수입니다");
         log.info("문서 내보내기 시작: projectId={}, format={}", projectId, format);
         
         // 프로젝트 조회
@@ -61,8 +64,15 @@ public class DocumentExportService {
 
     /**
      * 특정 버전의 문서 내보내기.
+     *
+     * @param projectId 프로젝트 ID (null 불가)
+     * @param version 문서 버전
+     * @param format 출력 포맷 (null 불가)
+     * @return 파일 바이트 배열
      */
     public byte[] exportDocumentVersion(String projectId, int version, ExportFormat format) {
+        Objects.requireNonNull(projectId, "프로젝트 ID는 필수입니다");
+        Objects.requireNonNull(format, "출력 포맷은 필수입니다");
         log.info("문서 내보내기: projectId={}, version={}, format={}", projectId, version, format);
         
         Project project = projectRepository.findById(projectId)
@@ -132,8 +142,15 @@ public class DocumentExportService {
 
     /**
      * 파일명 생성.
+     *
+     * @param projectId 프로젝트 ID (null 불가)
+     * @param format 출력 포맷 (null 불가)
+     * @return 생성된 파일명
      */
     public String generateFileName(String projectId, ExportFormat format) {
+        Objects.requireNonNull(projectId, "프로젝트 ID는 필수입니다");
+        Objects.requireNonNull(format, "출력 포맷은 필수입니다");
+        
         Project project = projectRepository.findById(projectId).orElse(null);
         String title = project != null && project.getTitle() != null 
                 ? project.getTitle().replaceAll("[^a-zA-Z0-9가-힣]", "_")
