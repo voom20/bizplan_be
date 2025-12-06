@@ -7,7 +7,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 /**
  * 사업계획서 문서 엔티티.
@@ -240,20 +242,26 @@ public class BusinessPlanDocument {
 
     /**
      * 전체 글자 수 계산.
+     * 모든 섹션 내용의 길이를 합산하여 반환한다.
+     *
+     * @return 전체 글자 수
      */
     private int calculateTotalWordCount() {
-        int count = 0;
-        if (executiveSummary != null) count += executiveSummary.length();
-        if (problemDefinition != null) count += problemDefinition.length();
-        if (solution != null) count += solution.length();
-        if (marketAnalysis != null) count += marketAnalysis.length();
-        if (businessModel != null) count += businessModel.length();
-        if (competitiveAnalysis != null) count += competitiveAnalysis.length();
-        if (marketingStrategy != null) count += marketingStrategy.length();
-        if (team != null) count += team.length();
-        if (financialPlan != null) count += financialPlan.length();
-        if (milestones != null) count += milestones.length();
-        return count;
+        return Stream.of(
+                executiveSummary,
+                problemDefinition,
+                solution,
+                marketAnalysis,
+                businessModel,
+                competitiveAnalysis,
+                marketingStrategy,
+                team,
+                financialPlan,
+                milestones
+        )
+        .filter(Objects::nonNull)
+        .mapToInt(String::length)
+        .sum();
     }
 }
 
