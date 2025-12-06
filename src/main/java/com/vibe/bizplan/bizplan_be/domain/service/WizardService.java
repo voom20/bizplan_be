@@ -42,7 +42,7 @@ public class WizardService {
         Objects.requireNonNull(projectId, "프로젝트 ID는 필수입니다");
         Objects.requireNonNull(request, "요청 데이터는 필수입니다");
         String stepId = request.stepId();
-        int answersFieldCount = request.answers() != null ? request.answers().size() : 0;
+        int answersFieldCount = request.answers().size();
         
         log.info("[Wizard] 답변 저장 시작 - projectId={}, stepId={}, fieldsCount={}", 
                 projectId, stepId, answersFieldCount);
