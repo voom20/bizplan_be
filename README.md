@@ -117,6 +117,22 @@ uvicorn app.main:app --port 8000
 
 ## 📡 API Endpoints
 
+### Authentication
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/auth/signup` | 회원가입 |
+| POST | `/auth/login` | 로그인 (JWT 발급) |
+| POST | `/auth/refresh` | 토큰 갱신 |
+| POST | `/auth/logout` | 로그아웃 |
+
+### Users
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/users/me` | 내 프로필 조회 |
+| PUT | `/users/me` | 내 프로필 수정 |
+| PUT | `/users/me/password` | 비밀번호 변경 |
+| DELETE | `/users/me` | 회원 탈퇴 |
+
 ### Projects
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -172,7 +188,8 @@ bizplan_be/
 │   │   ├── SecurityConfig.java
 │   │   └── ThymeleafConfig.java
 │   ├── domain/
-│   │   ├── entity/             # JPA Entities
+│   │   ├── entity/             # JPA Entities (Project, User, Document)
+│   │   ├── exception/          # Custom Exceptions
 │   │   ├── model/              # Enums & Value Objects
 │   │   └── service/            # Business Logic
 │   ├── dto/
@@ -181,12 +198,13 @@ bizplan_be/
 │   └── infrastructure/
 │       ├── client/             # External API Clients (AI Engine)
 │       ├── repository/         # JPA Repositories
-│       └── security/           # AES Encryption Utils
+│       └── security/           # JWT, AES Encryption, Security Checker
 ├── src/main/resources/
 │   ├── db/migration/           # Flyway Scripts
 │   │   ├── V1__create_project_table.sql
 │   │   ├── V2__add_wizard_answers_column.sql
-│   │   └── V3__create_business_plan_document_table.sql
+│   │   ├── V3__create_business_plan_document_table.sql
+│   │   └── V4__create_users_table.sql
 │   ├── templates/export/       # PDF Templates
 │   ├── application.properties
 │   └── application-mysql.properties
@@ -249,16 +267,29 @@ k6 run k6/scenarios/document-generation.js
 
 ## 🔒 Security
 
+### Authentication & Authorization
+- **JWT 기반 인증**: Access Token + Refresh Token
+- **Role-Based Access Control (RBAC)**: USER, PREMIUM, ADMIN 역할
+- **Spring Security 통합**: 엔드포인트별 권한 제어
+
+### Data Protection
 - **Encryption**: AES-256 for sensitive data at rest
+- **Password**: BCrypt 해시 (Strength: 10)
 - **TLS**: 1.2+ for all transit (production)
-- **Data Isolation**: Workspace-level separation
-- **Environment Variables**: 운영 환경에서는 반드시 환경변수로 암호화 키 설정
+- **Data Isolation**: User-level workspace separation
+
+### Project Access Control
+- 프로젝트 소유자만 접근 가능
+- ADMIN은 모든 프로젝트 접근 가능
+- 무료 사용자: 최대 5개 프로젝트 제한
+- PREMIUM/ADMIN: 무제한
 
 ### Environment Variables (Production)
 ```bash
 export DB_USERNAME=your_db_user
 export DB_PASSWORD=your_db_password
 export ENCRYPTION_KEY=your_base64_encoded_32byte_key
+export JWT_SECRET=your_jwt_secret_key_min_32_chars
 export AI_ENGINE_URL=http://your-ai-engine:8000
 ```
 
