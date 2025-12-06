@@ -3,6 +3,7 @@ package com.vibe.bizplan.bizplan_be.api;
 import com.vibe.bizplan.bizplan_be.domain.exception.DuplicateEmailException;
 import com.vibe.bizplan.bizplan_be.domain.exception.InvalidCredentialsException;
 import com.vibe.bizplan.bizplan_be.domain.exception.InvalidTokenException;
+import com.vibe.bizplan.bizplan_be.domain.exception.PasswordMismatchException;
 import com.vibe.bizplan.bizplan_be.domain.exception.ResourceNotFoundException;
 import com.vibe.bizplan.bizplan_be.domain.exception.WizardIncompleteException;
 import lombok.extern.slf4j.Slf4j;
@@ -169,6 +170,27 @@ public class GlobalExceptionHandler {
         );
         
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    }
+
+    /**
+     * 비밀번호 불일치 예외 처리.
+     * 비밀번호 변경/탈퇴 시 비밀번호가 일치하지 않는 경우 400을 반환한다.
+     */
+    @ExceptionHandler(PasswordMismatchException.class)
+    public ResponseEntity<ErrorResponse> handlePasswordMismatchException(PasswordMismatchException ex) {
+        log.warn("비밀번호 불일치: {}", ex.getMessage());
+        
+        Map<String, String> details = new HashMap<>();
+        details.put("code", ex.getCode());
+        
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                ex.getMessage(),
+                details
+        );
+        
+        return ResponseEntity.badRequest().body(errorResponse);
     }
 
     /**
