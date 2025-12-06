@@ -1,0 +1,37 @@
+# ==========================================
+# Prometheus Configuration
+# ==========================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  
+  # 모든 메트릭에 공통 라벨 추가
+  external_labels:
+    monitor: 'bizplan-monitor'
+
+# 알림 규칙 파일 (추후 추가)
+# rule_files:
+#   - "alert.rules.yml"
+
+# 스크랩 설정
+scrape_configs:
+  # Prometheus 자체 메트릭
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # BizPlan Backend API 메트릭
+  - job_name: 'bizplan-backend'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+    static_configs:
+      # Docker 환경에서는 host.docker.internal 사용
+      - targets: ['host.docker.internal:8080']
+        labels:
+          application: 'bizplan-be'
+          environment: 'development'
+    # 로컬 개발 환경에서는 아래 설정 사용
+    # static_configs:
+    #   - targets: ['localhost:8080']
+

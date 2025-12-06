@@ -1,0 +1,58 @@
+# ==========================================
+# Prometheus + Grafana 모니터링 스택
+# ==========================================
+# Usage: docker-compose -f docker/docker-compose.monitoring.yml up -d
+
+version: '3.8'
+
+services:
+  # ==========================================
+  # Prometheus - 메트릭 수집 및 저장
+  # ==========================================
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: bizplan-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  # ==========================================
+  # Grafana - 메트릭 시각화
+  # ==========================================
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: bizplan-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=bizplan123
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    networks:
+      - monitoring
+
+volumes:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  monitoring:
+    driver: bridge
+

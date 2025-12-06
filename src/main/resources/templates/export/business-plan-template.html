@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+    <meta charset="UTF-8"/>
+    <title th:text="${projectTitle}">사업계획서</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2.5cm;
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+            font-size: 11pt;
+            line-height: 1.8;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* 표지 */
+        .cover-page {
+            text-align: center;
+            padding-top: 200px;
+            page-break-after: always;
+        }
+        
+        .cover-page h1 {
+            font-size: 28pt;
+            font-weight: bold;
+            margin-bottom: 30px;
+            color: #1a365d;
+        }
+        
+        .cover-page .template-name {
+            font-size: 14pt;
+            color: #4a5568;
+            margin-bottom: 100px;
+        }
+        
+        .cover-page .meta-info {
+            font-size: 12pt;
+            color: #718096;
+        }
+        
+        /* 목차 */
+        .toc-page {
+            page-break-after: always;
+        }
+        
+        .toc-page h2 {
+            font-size: 18pt;
+            color: #1a365d;
+            border-bottom: 2px solid #1a365d;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .toc-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .toc-list li {
+            padding: 10px 0;
+            border-bottom: 1px dotted #ccc;
+            font-size: 12pt;
+        }
+        
+        /* 섹션 스타일 */
+        .section {
+            page-break-inside: avoid;
+            margin-bottom: 40px;
+        }
+        
+        .section-title {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #1a365d;
+            border-bottom: 2px solid #3182ce;
+            padding-bottom: 8px;
+            margin-bottom: 20px;
+            margin-top: 30px;
+        }
+        
+        .section-content {
+            text-align: justify;
+            white-space: pre-wrap;
+        }
+        
+        .section-content p {
+            margin-bottom: 15px;
+        }
+        
+        /* 페이지 구분 */
+        .page-break {
+            page-break-before: always;
+        }
+        
+        /* 푸터 */
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 9pt;
+            color: #718096;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 표지 -->
+<div class="cover-page">
+    <h1 th:text="${projectTitle}">사업계획서</h1>
+    <p class="template-name" th:text="${templateName}">예비창업패키지 2025</p>
+    <div class="meta-info">
+        <p>버전: <span th:text="${version}">1</span></p>
+        <p>작성일: <span th:text="${createdAt}">2025년 01월 01일</span></p>
+        <p>총 글자 수: <span th:text="${#numbers.formatInteger(totalWordCount, 0, 'COMMA')}">0</span>자</p>
+    </div>
+</div>
+
+<!-- 목차 -->
+<div class="toc-page">
+    <h2>목차</h2>
+    <ol class="toc-list">
+        <li th:if="${sections.executiveSummary}">1. 요약 (Executive Summary)</li>
+        <li th:if="${sections.problemDefinition}">2. 문제 정의</li>
+        <li th:if="${sections.solution}">3. 솔루션</li>
+        <li th:if="${sections.marketAnalysis}">4. 시장 분석</li>
+        <li th:if="${sections.businessModel}">5. 비즈니스 모델</li>
+        <li th:if="${sections.competitiveAnalysis}">6. 경쟁 분석</li>
+        <li th:if="${sections.marketingStrategy}">7. 마케팅 전략</li>
+        <li th:if="${sections.team}">8. 팀 소개</li>
+        <li th:if="${sections.financialPlan}">9. 재무 계획</li>
+        <li th:if="${sections.milestones}">10. 마일스톤</li>
+    </ol>
+</div>
+
+<!-- 본문 -->
+<div class="content">
+
+    <!-- 1. 요약 -->
+    <div class="section" th:if="${sections.executiveSummary}">
+        <h2 class="section-title">1. 요약 (Executive Summary)</h2>
+        <div class="section-content" th:text="${sections.executiveSummary}"></div>
+    </div>
+
+    <!-- 2. 문제 정의 -->
+    <div class="section page-break" th:if="${sections.problemDefinition}">
+        <h2 class="section-title">2. 문제 정의</h2>
+        <div class="section-content" th:text="${sections.problemDefinition}"></div>
+    </div>
+
+    <!-- 3. 솔루션 -->
+    <div class="section page-break" th:if="${sections.solution}">
+        <h2 class="section-title">3. 솔루션</h2>
+        <div class="section-content" th:text="${sections.solution}"></div>
+    </div>
+
+    <!-- 4. 시장 분석 -->
+    <div class="section page-break" th:if="${sections.marketAnalysis}">
+        <h2 class="section-title">4. 시장 분석</h2>
+        <div class="section-content" th:text="${sections.marketAnalysis}"></div>
+    </div>
+
+    <!-- 5. 비즈니스 모델 -->
+    <div class="section page-break" th:if="${sections.businessModel}">
+        <h2 class="section-title">5. 비즈니스 모델</h2>
+        <div class="section-content" th:text="${sections.businessModel}"></div>
+    </div>
+
+    <!-- 6. 경쟁 분석 -->
+    <div class="section page-break" th:if="${sections.competitiveAnalysis}">
+        <h2 class="section-title">6. 경쟁 분석</h2>
+        <div class="section-content" th:text="${sections.competitiveAnalysis}"></div>
+    </div>
+
+    <!-- 7. 마케팅 전략 -->
+    <div class="section page-break" th:if="${sections.marketingStrategy}">
+        <h2 class="section-title">7. 마케팅 전략</h2>
+        <div class="section-content" th:text="${sections.marketingStrategy}"></div>
+    </div>
+
+    <!-- 8. 팀 소개 -->
+    <div class="section page-break" th:if="${sections.team}">
+        <h2 class="section-title">8. 팀 소개</h2>
+        <div class="section-content" th:text="${sections.team}"></div>
+    </div>
+
+    <!-- 9. 재무 계획 -->
+    <div class="section page-break" th:if="${sections.financialPlan}">
+        <h2 class="section-title">9. 재무 계획</h2>
+        <div class="section-content" th:text="${sections.financialPlan}"></div>
+    </div>
+
+    <!-- 10. 마일스톤 -->
+    <div class="section page-break" th:if="${sections.milestones}">
+        <h2 class="section-title">10. 마일스톤</h2>
+        <div class="section-content" th:text="${sections.milestones}"></div>
+    </div>
+
+</div>
+
+</body>
+</html>
+
