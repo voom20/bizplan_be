@@ -68,7 +68,9 @@ public class ProjectService {
         
         try {
             TemplateCode templateCode = templateService.validateTemplateCode(requestedTemplateCode);
-            Project project = Project.create(templateCode, userId);
+            Project project = Objects.requireNonNull(
+                    Project.create(templateCode, userId),
+                    "생성된 프로젝트는 null일 수 없습니다");
             
             if (requestedTitle != null && !requestedTitle.isBlank()) {
                 project.updateTitle(requestedTitle);

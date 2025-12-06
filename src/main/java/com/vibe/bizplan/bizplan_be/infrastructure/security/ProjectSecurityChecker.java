@@ -28,6 +28,12 @@ public class ProjectSecurityChecker {
      * @return 소유자 또는 ADMIN인 경우 true
      */
     public boolean isOwner(String projectId) {
+        // Null 체크: projectId가 null이면 접근 거부
+        if (projectId == null) {
+            log.debug("프로젝트 접근 거부 - projectId가 null입니다");
+            return false;
+        }
+        
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         
         if (authentication == null || !authentication.isAuthenticated()) {
