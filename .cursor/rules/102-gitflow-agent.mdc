@@ -10,8 +10,8 @@ alwaysApply: false
 - One purpose per commit(atomic-commit), avoiding mixed intent changes or not compilable commit point
 
 # Branch and Remote Repository
-- Check current branch matches change intent (release/, feat/, fix/, doc/, etc)
-- If not matched, create a proper branch with proper prefix (release/, feat/, fix/, doc/, etc)
+- Check current branch matches change intent (feature/, release/, fix/, doc/, etc)
+- If not matched, create a proper branch with proper prefix (feature/<issue-number>_<description>)
 - One purpose per branch, avoiding many module changes per branch
 - Push to remote via `git push -u origin <branch>`
 - Verify GitHub credential via `git ls-remote`; prompt if missing
