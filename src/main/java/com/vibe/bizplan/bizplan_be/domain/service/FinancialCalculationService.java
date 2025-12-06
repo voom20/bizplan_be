@@ -1,5 +1,6 @@
 package com.vibe.bizplan.bizplan_be.domain.service;
 
+import com.vibe.bizplan.bizplan_be.domain.model.BizPlanConstants;
 import com.vibe.bizplan.bizplan_be.dto.request.FinancialAssumptionsRequest;
 import com.vibe.bizplan.bizplan_be.dto.response.FinancialProjectionResponse;
 import com.vibe.bizplan.bizplan_be.dto.response.FinancialProjectionResponse.*;
@@ -186,7 +187,8 @@ public class FinancialCalculationService {
             avgLifespan = BigDecimal.ONE
                     .divide(a.monthlyChurnRate(), SCALE, ROUNDING);
         } else {
-            avgLifespan = BigDecimal.valueOf(120); // 이탈률 0이면 10년으로 가정
+            // 이탈률 0이면 최대 유지 기간(10년)으로 가정
+            avgLifespan = BigDecimal.valueOf(BizPlanConstants.MAX_CUSTOMER_LIFESPAN_MONTHS);
         }
         
         // LTV = ARPU * 평균 유지 기간 * (1 - 변동비율)

@@ -1,5 +1,6 @@
 package com.vibe.bizplan.bizplan_be.api;
 
+import com.vibe.bizplan.bizplan_be.domain.model.BizPlanConstants;
 import com.vibe.bizplan.bizplan_be.domain.service.FinancialCalculationService;
 import com.vibe.bizplan.bizplan_be.dto.request.FinancialAssumptionsRequest;
 import com.vibe.bizplan.bizplan_be.dto.response.FinancialProjectionResponse;
@@ -52,8 +53,9 @@ public class FinancialPreviewController {
         log.info("POST /financials/preview - initialCapital={}, ARPU={}, CAC={}",
                 request.initialCapital(), request.averageRevenuePerUser(), request.customerAcquisitionCost());
         
-        // 미리보기는 projectId를 "preview"로 고정 설정
-        FinancialProjectionResponse response = financialCalculationService.generateProjection("preview", request);
+        // 미리보기는 projectId를 고정 설정
+        FinancialProjectionResponse response = financialCalculationService.generateProjection(
+                BizPlanConstants.PREVIEW_PROJECT_ID, request);
         
         log.info("재무 추정 미리보기 완료: months={}, BEP={}개월",
                 request.projectionMonths(), response.unitEconomics().breakEvenMonth());
