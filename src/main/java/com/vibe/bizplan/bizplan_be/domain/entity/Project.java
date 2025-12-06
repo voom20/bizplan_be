@@ -4,7 +4,11 @@ import com.vibe.bizplan.bizplan_be.domain.model.ProjectStatus;
 import com.vibe.bizplan.bizplan_be.domain.model.TemplateCode;
 import com.vibe.bizplan.bizplan_be.infrastructure.security.EncryptedStringConverter;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -14,11 +18,12 @@ import java.util.UUID;
 /**
  * 사업계획서 프로젝트 엔티티.
  * 사용자가 생성한 사업계획서 프로젝트의 메타데이터를 관리한다.
+ * 
+ * <p>불변성 강화: @Setter 대신 도메인 메서드(updateTitle, changeStatus, updateWizardAnswers)를 통해서만 상태 변경 가능</p>
  */
 @Entity
 @Table(name = "projects")
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
