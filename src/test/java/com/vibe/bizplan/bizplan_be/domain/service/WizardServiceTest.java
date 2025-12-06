@@ -34,6 +34,7 @@ import static org.mockito.Mockito.verify;
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("WizardService 단위 테스트")
+@SuppressWarnings("null") // Mockito 모킹의 null-safety 오탐 억제
 class WizardServiceTest {
 
     @Mock

@@ -27,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @Transactional
 @DisplayName("ProjectController 통합 테스트")
+@SuppressWarnings("null") // Spring Test의 null-safety 오탐 억제
 class ProjectControllerIntegrationTest {
 
     @Autowired
