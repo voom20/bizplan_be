@@ -1,13 +1,15 @@
 package com.vibe.bizplan.bizplan_be.infrastructure.security;
 
-import com.vibe.bizplan.bizplan_be.domain.entity.User;
-import com.vibe.bizplan.bizplan_be.domain.model.UserRole;
-import com.vibe.bizplan.bizplan_be.infrastructure.repository.ProjectRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+
+import com.vibe.bizplan.bizplan_be.domain.entity.User;
+import com.vibe.bizplan.bizplan_be.domain.model.UserRole;
+import com.vibe.bizplan.bizplan_be.infrastructure.repository.ProjectRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 프로젝트 리소스에 대한 보안 검사를 수행하는 컴포넌트.
@@ -125,8 +127,8 @@ public class ProjectSecurityChecker {
         }
         
         Object principal = authentication.getPrincipal();
-        if (principal instanceof User) {
-            return ((User) principal).getId();
+        if (principal instanceof User user) {
+            return user.getId();
         }
         
         return null;
