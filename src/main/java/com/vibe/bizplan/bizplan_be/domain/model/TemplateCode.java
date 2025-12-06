@@ -1,14 +1,9 @@
 package com.vibe.bizplan.bizplan_be.domain.model;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-
 /**
  * 사업계획서 템플릿 코드 열거형.
  * 지원하는 정부지원사업 및 대출용 템플릿 목록을 하드코딩으로 관리한다.
  */
-@Getter
-@RequiredArgsConstructor
 public enum TemplateCode {
     
     /** 예비창업패키지 2025 */
@@ -34,5 +29,56 @@ public enum TemplateCode {
     
     /** Wizard 전체 단계 수 */
     private final int totalSteps;
+
+    /**
+     * 생성자.
+     *
+     * @param displayName 템플릿 표시명
+     * @param description 템플릿 설명
+     * @param category 템플릿 카테고리
+     * @param totalSteps Wizard 전체 단계 수
+     */
+    TemplateCode(String displayName, String description, String category, int totalSteps) {
+        this.displayName = displayName;
+        this.description = description;
+        this.category = category;
+        this.totalSteps = totalSteps;
+    }
+
+    /**
+     * 템플릿 표시명 반환.
+     *
+     * @return 템플릿 표시명
+     */
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    /**
+     * 템플릿 설명 반환.
+     *
+     * @return 템플릿 설명
+     */
+    public String getDescription() {
+        return description;
+    }
+
+    /**
+     * 템플릿 카테고리 반환.
+     *
+     * @return 템플릿 카테고리 (government, bank, investor)
+     */
+    public String getCategory() {
+        return category;
+    }
+
+    /**
+     * Wizard 전체 단계 수 반환.
+     *
+     * @return Wizard 전체 단계 수
+     */
+    public int getTotalSteps() {
+        return totalSteps;
+    }
 }
 
