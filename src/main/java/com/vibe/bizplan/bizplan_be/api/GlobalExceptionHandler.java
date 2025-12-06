@@ -4,8 +4,11 @@ import com.vibe.bizplan.bizplan_be.domain.exception.DuplicateEmailException;
 import com.vibe.bizplan.bizplan_be.domain.exception.InvalidCredentialsException;
 import com.vibe.bizplan.bizplan_be.domain.exception.InvalidTokenException;
 import com.vibe.bizplan.bizplan_be.domain.exception.PasswordMismatchException;
+import com.vibe.bizplan.bizplan_be.domain.exception.ProjectLimitExceededException;
+import com.vibe.bizplan.bizplan_be.domain.exception.ResourceAccessDeniedException;
 import com.vibe.bizplan.bizplan_be.domain.exception.ResourceNotFoundException;
 import com.vibe.bizplan.bizplan_be.domain.exception.WizardIncompleteException;
+import org.springframework.security.access.AccessDeniedException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -191,6 +194,73 @@ public class GlobalExceptionHandler {
         );
         
         return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    /**
+     * 리소스 접근 거부 예외 처리.
+     * 리소스에 대한 접근 권한이 없는 경우 403을 반환한다.
+     */
+    @ExceptionHandler(ResourceAccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleResourceAccessDeniedException(ResourceAccessDeniedException ex) {
+        log.warn("리소스 접근 거부: {} - {}", ex.getResourceType(), ex.getResourceId());
+        
+        Map<String, String> details = new HashMap<>();
+        details.put("code", ex.getCode());
+        details.put("resourceType", ex.getResourceType());
+        details.put("resourceId", ex.getResourceId());
+        
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.FORBIDDEN.value(),
+                "Forbidden",
+                ex.getMessage(),
+                details
+        );
+        
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+    }
+
+    /**
+     * 프로젝트 생성 한도 초과 예외 처리.
+     * 무료 사용자가 최대 프로젝트 개수를 초과한 경우 403을 반환한다.
+     */
+    @ExceptionHandler(ProjectLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleProjectLimitExceededException(ProjectLimitExceededException ex) {
+        log.warn("프로젝트 생성 한도 초과: current={}, max={}", ex.getCurrentCount(), ex.getMaxCount());
+        
+        Map<String, String> details = new HashMap<>();
+        details.put("code", ex.getCode());
+        details.put("currentCount", String.valueOf(ex.getCurrentCount()));
+        details.put("maxCount", String.valueOf(ex.getMaxCount()));
+        
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.FORBIDDEN.value(),
+                "Forbidden",
+                ex.getMessage(),
+                details
+        );
+        
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+    }
+
+    /**
+     * Spring Security AccessDeniedException 처리.
+     * @PreAuthorize 등으로 접근이 거부된 경우 403을 반환한다.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException ex) {
+        log.warn("접근 거부: {}", ex.getMessage());
+        
+        Map<String, String> details = new HashMap<>();
+        details.put("code", "AUTHZ_001");
+        
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.FORBIDDEN.value(),
+                "Forbidden",
+                "접근 권한이 없습니다",
+                details
+        );
+        
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
     }
 
     /**
