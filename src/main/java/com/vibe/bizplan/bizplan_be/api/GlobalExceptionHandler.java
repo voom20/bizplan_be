@@ -1,5 +1,8 @@
 package com.vibe.bizplan.bizplan_be.api;
 
+import com.vibe.bizplan.bizplan_be.domain.exception.DuplicateEmailException;
+import com.vibe.bizplan.bizplan_be.domain.exception.InvalidCredentialsException;
+import com.vibe.bizplan.bizplan_be.domain.exception.InvalidTokenException;
 import com.vibe.bizplan.bizplan_be.domain.exception.ResourceNotFoundException;
 import com.vibe.bizplan.bizplan_be.domain.exception.WizardIncompleteException;
 import lombok.extern.slf4j.Slf4j;
@@ -103,6 +106,69 @@ public class GlobalExceptionHandler {
         );
         
         return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    /**
+     * 이메일 중복 예외 처리.
+     * 회원가입 시 이메일이 이미 존재하는 경우 409를 반환한다.
+     */
+    @ExceptionHandler(DuplicateEmailException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateEmailException(DuplicateEmailException ex) {
+        log.warn("이메일 중복: {}", ex.getMessage());
+        
+        Map<String, String> details = new HashMap<>();
+        details.put("code", "AUTH_001");
+        
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                "Conflict",
+                ex.getMessage(),
+                details
+        );
+        
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    /**
+     * 인증 실패 예외 처리.
+     * 로그인 실패 시 401을 반환한다.
+     */
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCredentialsException(InvalidCredentialsException ex) {
+        log.warn("인증 실패: {}", ex.getMessage());
+        
+        Map<String, String> details = new HashMap<>();
+        details.put("code", "AUTH_002");
+        
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.UNAUTHORIZED.value(),
+                "Unauthorized",
+                ex.getMessage(),
+                details
+        );
+        
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    }
+
+    /**
+     * 토큰 유효하지 않음 예외 처리.
+     * JWT 토큰이 유효하지 않은 경우 401을 반환한다.
+     */
+    @ExceptionHandler(InvalidTokenException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidTokenException(InvalidTokenException ex) {
+        log.warn("토큰 유효하지 않음: {}", ex.getMessage());
+        
+        Map<String, String> details = new HashMap<>();
+        details.put("code", "AUTH_004");
+        
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.UNAUTHORIZED.value(),
+                "Unauthorized",
+                ex.getMessage(),
+                details
+        );
+        
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
     }
 
     /**
