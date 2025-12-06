@@ -1,5 +1,7 @@
 package com.vibe.bizplan.bizplan_be.api;
 
+import com.vibe.bizplan.bizplan_be.domain.exception.ResourceNotFoundException;
+import com.vibe.bizplan.bizplan_be.domain.exception.WizardIncompleteException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -56,6 +58,47 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST.value(),
                 "Bad Request",
                 "입력값 검증에 실패했습니다",
+                details
+        );
+        
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    /**
+     * 리소스 미존재 예외 처리.
+     * 프로젝트, 문서 등 리소스를 찾을 수 없을 때 404를 반환한다.
+     */
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleResourceNotFoundException(ResourceNotFoundException ex) {
+        log.warn("리소스 미존재: {} - {}", ex.getResourceType(), ex.getResourceId());
+        
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                "Not Found",
+                ex.getMessage()
+        );
+        
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    /**
+     * Wizard 미완료 예외 처리.
+     * Wizard가 완료되지 않은 상태에서 문서 생성 시도 시 400을 반환한다.
+     */
+    @ExceptionHandler(WizardIncompleteException.class)
+    public ResponseEntity<ErrorResponse> handleWizardIncompleteException(WizardIncompleteException ex) {
+        log.warn("Wizard 미완료: projectId={}, completedSteps={}/{}", 
+                ex.getProjectId(), ex.getCompletedSteps(), ex.getRequiredSteps());
+        
+        Map<String, String> details = new HashMap<>();
+        details.put("projectId", ex.getProjectId());
+        details.put("completedSteps", String.valueOf(ex.getCompletedSteps()));
+        details.put("requiredSteps", String.valueOf(ex.getRequiredSteps()));
+        
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "Wizard Incomplete",
+                ex.getMessage(),
                 details
         );
         

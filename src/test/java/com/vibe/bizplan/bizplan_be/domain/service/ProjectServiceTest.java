@@ -1,6 +1,7 @@
 package com.vibe.bizplan.bizplan_be.domain.service;
 
 import com.vibe.bizplan.bizplan_be.domain.entity.Project;
+import com.vibe.bizplan.bizplan_be.domain.exception.ProjectNotFoundException;
 import com.vibe.bizplan.bizplan_be.domain.model.ProjectStatus;
 import com.vibe.bizplan.bizplan_be.domain.model.TemplateCode;
 import com.vibe.bizplan.bizplan_be.dto.request.CreateProjectRequest;
@@ -238,14 +239,14 @@ class ProjectServiceTest {
 
         @Test
         @DisplayName("존재하지 않는 프로젝트 ID로 조회 시 예외 발생")
-        void getProjectEntity_WithNonExistingId_ThrowsIllegalArgumentException() {
+        void getProjectEntity_WithNonExistingId_ThrowsProjectNotFoundException() {
             // given
             given(projectRepository.findById("non-existing-id")).willReturn(Optional.empty());
 
             // when & then
             assertThatThrownBy(() -> projectService.getProjectEntity("non-existing-id"))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("프로젝트를 찾을 수 없습니다");
+                    .isInstanceOf(ProjectNotFoundException.class)
+                    .hasMessageContaining("프로젝트");
         }
 
         @Test

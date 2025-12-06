@@ -2,6 +2,8 @@ package com.vibe.bizplan.bizplan_be.domain.service;
 
 import com.vibe.bizplan.bizplan_be.domain.entity.BusinessPlanDocument;
 import com.vibe.bizplan.bizplan_be.domain.entity.Project;
+import com.vibe.bizplan.bizplan_be.domain.exception.DocumentNotFoundException;
+import com.vibe.bizplan.bizplan_be.domain.exception.ProjectNotFoundException;
 import com.vibe.bizplan.bizplan_be.domain.model.ExportFormat;
 import com.vibe.bizplan.bizplan_be.infrastructure.repository.BusinessPlanDocumentRepository;
 import com.vibe.bizplan.bizplan_be.infrastructure.repository.ProjectRepository;
@@ -53,7 +55,7 @@ public class DocumentExportService {
             Project project = projectRepository.findById(projectId)
                     .orElseThrow(() -> {
                         log.error("[Export] 프로젝트 조회 실패 - projectId={} (존재하지 않음)", projectId);
-                        return new IllegalArgumentException("프로젝트를 찾을 수 없습니다: " + projectId);
+                        return new ProjectNotFoundException(projectId);
                     });
             
             String templateCode = project.getTemplateCode().name();
@@ -64,7 +66,7 @@ public class DocumentExportService {
             BusinessPlanDocument document = documentRepository.findFirstByProjectIdOrderByVersionDesc(projectId)
                     .orElseThrow(() -> {
                         log.error("[Export] 문서 조회 실패 - projectId={} (문서 없음)", projectId);
-                        return new IllegalStateException("생성된 사업계획서가 없습니다. 먼저 문서를 생성해주세요.");
+                        return DocumentNotFoundException.noDocumentForProject(projectId);
                     });
             
             log.debug("[Export] 문서 조회 완료 - projectId={}, documentId={}, version={}", 
@@ -87,7 +89,7 @@ public class DocumentExportService {
             
             return result;
             
-        } catch (IllegalArgumentException | IllegalStateException e) {
+        } catch (ProjectNotFoundException | DocumentNotFoundException e) {
             long duration = System.currentTimeMillis() - startTime;
             log.error("[Export] 문서 내보내기 실패 (비즈니스 오류) - projectId={}, format={}, error={}, duration={}ms", 
                     projectId, format, e.getMessage(), duration);
@@ -121,7 +123,7 @@ public class DocumentExportService {
             Project project = projectRepository.findById(projectId)
                     .orElseThrow(() -> {
                         log.error("[Export] 프로젝트 조회 실패 - projectId={}", projectId);
-                        return new IllegalArgumentException("프로젝트를 찾을 수 없습니다");
+                        return new ProjectNotFoundException(projectId);
                     });
             
             // [Stage 3] 특정 버전 문서 조회
@@ -129,7 +131,7 @@ public class DocumentExportService {
             BusinessPlanDocument document = documentRepository.findByProjectIdAndVersion(projectId, version)
                     .orElseThrow(() -> {
                         log.error("[Export] 문서 조회 실패 - projectId={}, version={} (해당 버전 없음)", projectId, version);
-                        return new IllegalArgumentException("해당 버전의 문서를 찾을 수 없습니다: v" + version);
+                        return DocumentNotFoundException.versionNotFound(projectId, version);
                     });
             
             log.debug("[Export] 문서 조회 완료 - projectId={}, documentId={}, version={}", 
@@ -149,7 +151,7 @@ public class DocumentExportService {
             
             return result;
             
-        } catch (IllegalArgumentException e) {
+        } catch (ProjectNotFoundException | DocumentNotFoundException e) {
             long duration = System.currentTimeMillis() - startTime;
             log.error("[Export] 버전별 문서 내보내기 실패 - projectId={}, version={}, error={}, duration={}ms", 
                     projectId, version, e.getMessage(), duration);

@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.vibe.bizplan.bizplan_be.domain.entity.Project;
+import com.vibe.bizplan.bizplan_be.domain.exception.ProjectNotFoundException;
+import com.vibe.bizplan.bizplan_be.domain.model.BizPlanConstants;
 import com.vibe.bizplan.bizplan_be.domain.model.TemplateCode;
 import com.vibe.bizplan.bizplan_be.dto.request.CreateProjectRequest;
 import com.vibe.bizplan.bizplan_be.dto.response.ProjectResponse;
@@ -29,9 +31,6 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final TemplateService templateService;
     private final ProjectResponseMapper projectResponseMapper;
-
-    /** MVP용 기본 사용자 ID (인증 미구현) */
-    private static final String DEFAULT_USER_ID = "default-user";
 
     /**
      * 새 프로젝트 생성.
@@ -58,8 +57,8 @@ public class ProjectService {
                     templateCode.name(), templateCode.getTotalSteps());
             
             // [Stage 3] 프로젝트 엔티티 생성
-            log.debug("[Project] 프로젝트 엔티티 생성 중 - userId={}", DEFAULT_USER_ID);
-            Project project = Project.create(templateCode, DEFAULT_USER_ID);
+            log.debug("[Project] 프로젝트 엔티티 생성 중 - userId={}", BizPlanConstants.DEFAULT_USER_ID);
+            Project project = Project.create(templateCode, BizPlanConstants.DEFAULT_USER_ID);
             
             if (requestedTitle != null && !requestedTitle.isBlank()) {
                 project.updateTitle(requestedTitle);
@@ -121,12 +120,12 @@ public class ProjectService {
      */
     @Transactional(readOnly = true)
     public List<ProjectResponse> getMyProjects() {
-        log.info("[Project] 프로젝트 목록 조회 시작 - userId={}", DEFAULT_USER_ID);
+        log.info("[Project] 프로젝트 목록 조회 시작 - userId={}", BizPlanConstants.DEFAULT_USER_ID);
         
-        List<Project> projects = projectRepository.findByUserId(DEFAULT_USER_ID);
+        List<Project> projects = projectRepository.findByUserId(BizPlanConstants.DEFAULT_USER_ID);
         List<ProjectResponse> response = projectResponseMapper.toResponseList(projects);
         
-        log.info("[Project] 프로젝트 목록 조회 완료 - userId={}, count={}", DEFAULT_USER_ID, response.size());
+        log.info("[Project] 프로젝트 목록 조회 완료 - userId={}, count={}", BizPlanConstants.DEFAULT_USER_ID, response.size());
         return response;
     }
 
@@ -145,7 +144,7 @@ public class ProjectService {
         return projectRepository.findById(projectId)
                 .orElseThrow(() -> {
                     log.warn("[Project] 프로젝트 엔티티 조회 실패 - projectId={} (존재하지 않음)", projectId);
-                    return new IllegalArgumentException("프로젝트를 찾을 수 없습니다: " + projectId);
+                    return new ProjectNotFoundException(projectId);
                 });
     }
 }

@@ -2,6 +2,8 @@ package com.vibe.bizplan.bizplan_be.dto.request;
 
 import java.math.BigDecimal;
 
+import com.vibe.bizplan.bizplan_be.domain.model.BizPlanConstants;
+
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
@@ -89,13 +91,13 @@ public record FinancialAssumptionsRequest(
      */
     public FinancialAssumptionsRequest {
         if (variableCostRate == null) {
-            variableCostRate = BigDecimal.valueOf(0.3);
+            variableCostRate = BizPlanConstants.DEFAULT_VARIABLE_COST_RATE;
         }
         if (initialCustomers == null) {
             initialCustomers = 0;
         }
         if (projectionMonths == null) {
-            projectionMonths = 36;
+            projectionMonths = BizPlanConstants.DEFAULT_PROJECTION_MONTHS;
         }
     }
 }

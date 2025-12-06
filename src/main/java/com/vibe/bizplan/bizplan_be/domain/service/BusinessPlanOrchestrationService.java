@@ -1,9 +1,12 @@
 package com.vibe.bizplan.bizplan_be.domain.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vibe.bizplan.bizplan_be.domain.entity.BusinessPlanDocument;
 import com.vibe.bizplan.bizplan_be.domain.entity.Project;
+import com.vibe.bizplan.bizplan_be.domain.exception.DocumentNotFoundException;
+import com.vibe.bizplan.bizplan_be.domain.exception.ProjectNotFoundException;
+import com.vibe.bizplan.bizplan_be.domain.exception.WizardIncompleteException;
+import com.vibe.bizplan.bizplan_be.domain.model.SectionType;
+import com.vibe.bizplan.bizplan_be.domain.service.util.JsonParsingUtil;
 import com.vibe.bizplan.bizplan_be.infrastructure.client.AiEngineClient;
 import com.vibe.bizplan.bizplan_be.infrastructure.client.dto.BizPlanGenerateRequest;
 import com.vibe.bizplan.bizplan_be.infrastructure.client.dto.BizPlanGenerateResponse;
@@ -28,21 +31,10 @@ public class BusinessPlanOrchestrationService {
     private final ProjectRepository projectRepository;
     private final BusinessPlanDocumentRepository documentRepository;
     private final AiEngineClient aiEngineClient;
-    private final ObjectMapper objectMapper;
+    private final JsonParsingUtil jsonParsingUtil;
 
-    /** 생성할 섹션 순서 */
-    private static final List<String> SECTION_ORDER = List.of(
-            "executive_summary",
-            "problem_definition",
-            "solution",
-            "market_analysis",
-            "business_model",
-            "competitive_analysis",
-            "marketing_strategy",
-            "team",
-            "financial_plan",
-            "milestones"
-    );
+    /** 생성할 섹션 순서 (SectionType enum에서 관리) */
+    private static final List<SectionType> SECTION_ORDER = SectionType.getOrderedSections();
 
     /**
      * 사업계획서 전체 생성.
@@ -65,7 +57,7 @@ public class BusinessPlanOrchestrationService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> {
                     log.error("[BizPlan] 프로젝트 조회 실패 - projectId={} (존재하지 않음)", projectId);
-                    return new IllegalArgumentException("프로젝트를 찾을 수 없습니다: " + projectId);
+                    return new ProjectNotFoundException(projectId);
                 });
         
         String templateCode = project.getTemplateCode().name();
@@ -74,10 +66,10 @@ public class BusinessPlanOrchestrationService {
 
         // [Stage 3] Wizard 답변 파싱 및 검증
         log.debug("[BizPlan] Wizard 답변 파싱 중 - projectId={}", projectId);
-        Map<String, Object> context = parseWizardAnswers(project.getWizardAnswers());
+        Map<String, Object> context = jsonParsingUtil.parseToImmutableMap(project.getWizardAnswers());
         if (context.isEmpty()) {
             log.error("[BizPlan] Wizard 답변 없음 - projectId={}", projectId);
-            throw new IllegalStateException("Wizard 답변이 없습니다. 먼저 Wizard를 완료해주세요.");
+            throw new WizardIncompleteException(projectId);
         }
         log.debug("[BizPlan] Wizard 답변 파싱 완료 - projectId={}, contextKeys={}", projectId, context.keySet());
 
@@ -96,16 +88,17 @@ public class BusinessPlanOrchestrationService {
         int sectionIndex = 0;
 
         try {
-            for (String sectionType : SECTION_ORDER) {
+            for (SectionType section : SECTION_ORDER) {
                 sectionIndex++;
                 long sectionStartTime = System.currentTimeMillis();
+                String sectionCode = section.getCode();
                 log.info("[BizPlan] 섹션 생성 시작 - projectId={}, documentId={}, section={} ({}/{})", 
-                        projectId, documentId, sectionType, sectionIndex, SECTION_ORDER.size());
+                        projectId, documentId, sectionCode, sectionIndex, SECTION_ORDER.size());
                 
                 BizPlanGenerateRequest request = BizPlanGenerateRequest.withPreviousSections(
                         projectId,
                         templateCode,
-                        sectionType,
+                        sectionCode,
                         context,
                         generatedSections
                 );
@@ -115,14 +108,14 @@ public class BusinessPlanOrchestrationService {
                 if (response != null && response.section() != null) {
                     String content = response.section().content();
                     int contentLength = content != null ? content.length() : 0;
-                    generatedSections.put(sectionType, content);
-                    updateDocumentSection(document, sectionType, content);
+                    generatedSections.put(sectionCode, content);
+                    section.setContent(document, content);
                     
                     long sectionDuration = System.currentTimeMillis() - sectionStartTime;
                     log.info("[BizPlan] 섹션 생성 완료 - projectId={}, section={}, contentLength={}, duration={}ms", 
-                            projectId, sectionType, contentLength, sectionDuration);
+                            projectId, sectionCode, contentLength, sectionDuration);
                 } else {
-                    log.warn("[BizPlan] 섹션 생성 응답 없음 - projectId={}, section={}", projectId, sectionType);
+                    log.warn("[BizPlan] 섹션 생성 응답 없음 - projectId={}, section={}", projectId, sectionCode);
                 }
             }
 
@@ -154,16 +147,23 @@ public class BusinessPlanOrchestrationService {
      * 단일 섹션 생성 (재생성용).
      *
      * @param documentId 문서 ID (null 불가)
-     * @param sectionType 섹션 타입 (null 불가)
+     * @param sectionCode 섹션 코드 (null 불가)
      * @return 업데이트된 문서
      */
     @Transactional
-    public BusinessPlanDocument regenerateSection(String documentId, String sectionType) {
+    public BusinessPlanDocument regenerateSection(String documentId, String sectionCode) {
         // [Stage 1] 요청 검증
         Objects.requireNonNull(documentId, "문서 ID는 필수입니다");
-        Objects.requireNonNull(sectionType, "섹션 타입은 필수입니다");
+        Objects.requireNonNull(sectionCode, "섹션 코드는 필수입니다");
         long startTime = System.currentTimeMillis();
-        log.info("[BizPlan] 섹션 재생성 시작 - documentId={}, sectionType={}", documentId, sectionType);
+        log.info("[BizPlan] 섹션 재생성 시작 - documentId={}, sectionCode={}", documentId, sectionCode);
+
+        // 섹션 타입 검증
+        SectionType section = SectionType.fromCode(sectionCode)
+                .orElseThrow(() -> {
+                    log.error("[BizPlan] 유효하지 않은 섹션 코드 - sectionCode={}", sectionCode);
+                    return new IllegalArgumentException("유효하지 않은 섹션 코드입니다: " + sectionCode);
+                });
 
         try {
             // [Stage 2] 문서 조회
@@ -171,7 +171,7 @@ public class BusinessPlanOrchestrationService {
             BusinessPlanDocument document = documentRepository.findById(documentId)
                     .orElseThrow(() -> {
                         log.error("[BizPlan] 문서 조회 실패 - documentId={} (존재하지 않음)", documentId);
-                        return new IllegalArgumentException("문서를 찾을 수 없습니다: " + documentId);
+                        return new DocumentNotFoundException(documentId);
                     });
 
             // [Stage 3] 프로젝트 조회
@@ -180,23 +180,23 @@ public class BusinessPlanOrchestrationService {
             Project project = projectRepository.findById(projectId)
                     .orElseThrow(() -> {
                         log.error("[BizPlan] 프로젝트 조회 실패 - projectId={}", projectId);
-                        return new IllegalArgumentException("프로젝트를 찾을 수 없습니다");
+                        return new ProjectNotFoundException(projectId);
                     });
             
             String templateCode = project.getTemplateCode().name();
             log.debug("[BizPlan] 프로젝트 조회 완료 - projectId={}, templateCode={}", projectId, templateCode);
 
             // [Stage 4] 컨텍스트 및 이전 섹션 준비
-            Map<String, Object> context = parseWizardAnswers(project.getWizardAnswers());
-            Map<String, String> previousSections = extractPreviousSections(document, sectionType);
+            Map<String, Object> context = jsonParsingUtil.parseToImmutableMap(project.getWizardAnswers());
+            Map<String, String> previousSections = extractPreviousSections(document, section);
             log.debug("[BizPlan] 컨텍스트 준비 완료 - previousSectionsCount={}", previousSections.size());
 
             // [Stage 5] AI 엔진 호출
-            log.debug("[BizPlan] AI 엔진 호출 중 - documentId={}, sectionType={}", documentId, sectionType);
+            log.debug("[BizPlan] AI 엔진 호출 중 - documentId={}, sectionCode={}", documentId, sectionCode);
             BizPlanGenerateRequest request = BizPlanGenerateRequest.withPreviousSections(
                     document.getProjectId(),
                     templateCode,
-                    sectionType,
+                    sectionCode,
                     context,
                     previousSections
             );
@@ -207,27 +207,27 @@ public class BusinessPlanOrchestrationService {
             if (response != null && response.section() != null) {
                 String content = response.section().content();
                 int contentLength = content != null ? content.length() : 0;
-                updateDocumentSection(document, sectionType, content);
+                section.setContent(document, content);
                 document = documentRepository.save(document);
                 
                 long duration = System.currentTimeMillis() - startTime;
-                log.info("[BizPlan] 섹션 재생성 완료 - documentId={}, sectionType={}, contentLength={}, duration={}ms", 
-                        documentId, sectionType, contentLength, duration);
+                log.info("[BizPlan] 섹션 재생성 완료 - documentId={}, sectionCode={}, contentLength={}, duration={}ms", 
+                        documentId, sectionCode, contentLength, duration);
             } else {
-                log.warn("[BizPlan] 섹션 재생성 응답 없음 - documentId={}, sectionType={}", documentId, sectionType);
+                log.warn("[BizPlan] 섹션 재생성 응답 없음 - documentId={}, sectionCode={}", documentId, sectionCode);
             }
 
             return document;
             
         } catch (IllegalArgumentException e) {
             long duration = System.currentTimeMillis() - startTime;
-            log.error("[BizPlan] 섹션 재생성 실패 (비즈니스 오류) - documentId={}, sectionType={}, error={}, duration={}ms", 
-                    documentId, sectionType, e.getMessage(), duration);
+            log.error("[BizPlan] 섹션 재생성 실패 (비즈니스 오류) - documentId={}, sectionCode={}, error={}, duration={}ms", 
+                    documentId, sectionCode, e.getMessage(), duration);
             throw e;
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
-            log.error("[BizPlan] 섹션 재생성 실패 (시스템 오류) - documentId={}, sectionType={}, duration={}ms", 
-                    documentId, sectionType, duration, e);
+            log.error("[BizPlan] 섹션 재생성 실패 (시스템 오류) - documentId={}, sectionCode={}, duration={}ms", 
+                    documentId, sectionCode, duration, e);
             throw e;
         }
     }
@@ -279,74 +279,25 @@ public class BusinessPlanOrchestrationService {
     // ==========================================
 
     /**
-     * Wizard 답변 JSON 파싱.
-     */
-    private Map<String, Object> parseWizardAnswers(String wizardAnswersJson) {
-        if (wizardAnswersJson == null || wizardAnswersJson.isBlank()) {
-            return Collections.emptyMap();
-        }
-        try {
-            return objectMapper.readValue(wizardAnswersJson, new TypeReference<Map<String, Object>>() {});
-        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-            log.warn("Wizard 답변 파싱 실패: {}", e.getMessage());
-            return Collections.emptyMap();
-        }
-    }
-
-    /**
-     * 섹션 타입에 따라 문서 업데이트.
-     */
-    private void updateDocumentSection(BusinessPlanDocument document, String sectionType, String content) {
-        switch (sectionType) {
-            case "executive_summary" -> document.updateExecutiveSummary(content);
-            case "problem_definition" -> document.updateProblemDefinition(content);
-            case "solution" -> document.updateSolution(content);
-            case "market_analysis" -> document.updateMarketAnalysis(content);
-            case "business_model" -> document.updateBusinessModel(content);
-            case "competitive_analysis" -> document.updateCompetitiveAnalysis(content);
-            case "marketing_strategy" -> document.updateMarketingStrategy(content);
-            case "team" -> document.updateTeam(content);
-            case "financial_plan" -> document.updateFinancialPlan(content);
-            case "milestones" -> document.updateMilestones(content);
-            default -> log.warn("알 수 없는 섹션 타입: {}", sectionType);
-        }
-    }
-
-    /**
      * 현재 섹션 이전에 생성된 섹션들 추출.
+     *
+     * @param doc 사업계획서 문서
+     * @param currentSection 현재 섹션 타입
+     * @return 이전 섹션들의 내용 (code -> content)
      */
-    private Map<String, String> extractPreviousSections(BusinessPlanDocument doc, String currentSection) {
+    private Map<String, String> extractPreviousSections(BusinessPlanDocument doc, SectionType currentSection) {
         Map<String, String> previous = new LinkedHashMap<>();
         
-        for (String section : SECTION_ORDER) {
-            if (section.equals(currentSection)) break;
+        for (SectionType section : SECTION_ORDER) {
+            if (section == currentSection) break;
             
-            String content = getSectionContent(doc, section);
+            String content = section.getContent(doc);
             if (content != null && !content.isBlank()) {
-                previous.put(section, content);
+                previous.put(section.getCode(), content);
             }
         }
         
         return previous;
-    }
-
-    /**
-     * 문서에서 섹션 내용 추출.
-     */
-    private String getSectionContent(BusinessPlanDocument doc, String sectionType) {
-        return switch (sectionType) {
-            case "executive_summary" -> doc.getExecutiveSummary();
-            case "problem_definition" -> doc.getProblemDefinition();
-            case "solution" -> doc.getSolution();
-            case "market_analysis" -> doc.getMarketAnalysis();
-            case "business_model" -> doc.getBusinessModel();
-            case "competitive_analysis" -> doc.getCompetitiveAnalysis();
-            case "marketing_strategy" -> doc.getMarketingStrategy();
-            case "team" -> doc.getTeam();
-            case "financial_plan" -> doc.getFinancialPlan();
-            case "milestones" -> doc.getMilestones();
-            default -> null;
-        };
     }
 }
 
