@@ -52,11 +52,33 @@ public class WizardController {
             @Parameter(description = "프로젝트 ID") @PathVariable String projectId,
             @Valid @RequestBody SaveWizardAnswersRequest request
     ) {
-        log.info("POST /projects/{}/wizard/steps - stepId={}", projectId, request.stepId());
+        long startTime = System.currentTimeMillis();
+        String stepId = request.stepId();
+        int fieldsCount = request.answers() != null ? request.answers().size() : 0;
         
-        WizardAnswersResponse response = wizardService.saveAnswers(projectId, request);
+        log.info("[API] POST /projects/{}/wizard/steps 요청 수신 - stepId={}, fieldsCount={}", 
+                projectId, stepId, fieldsCount);
         
-        return ResponseEntity.ok(response);
+        try {
+            WizardAnswersResponse response = wizardService.saveAnswers(projectId, request);
+            
+            long duration = System.currentTimeMillis() - startTime;
+            log.info("[API] POST /projects/{}/wizard/steps 응답 완료 - stepId={}, completedSteps={}/{}, duration={}ms", 
+                    projectId, stepId, response.completedSteps(), response.totalSteps(), duration);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (IllegalArgumentException e) {
+            long duration = System.currentTimeMillis() - startTime;
+            log.warn("[API] POST /projects/{}/wizard/steps 요청 실패 (400) - stepId={}, error={}, duration={}ms", 
+                    projectId, stepId, e.getMessage(), duration);
+            throw e;
+        } catch (Exception e) {
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("[API] POST /projects/{}/wizard/steps 요청 실패 (500) - stepId={}, duration={}ms", 
+                    projectId, stepId, duration, e);
+            throw e;
+        }
     }
 
     /**
@@ -76,11 +98,29 @@ public class WizardController {
     public ResponseEntity<WizardAnswersResponse> getAnswers(
             @Parameter(description = "프로젝트 ID") @PathVariable String projectId
     ) {
-        log.info("GET /projects/{}/wizard/answers", projectId);
+        long startTime = System.currentTimeMillis();
+        log.info("[API] GET /projects/{}/wizard/answers 요청 수신", projectId);
         
-        WizardAnswersResponse response = wizardService.getAnswers(projectId);
-        
-        return ResponseEntity.ok(response);
+        try {
+            WizardAnswersResponse response = wizardService.getAnswers(projectId);
+            
+            long duration = System.currentTimeMillis() - startTime;
+            log.info("[API] GET /projects/{}/wizard/answers 응답 완료 - completedSteps={}/{}, duration={}ms", 
+                    projectId, response.completedSteps(), response.totalSteps(), duration);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (IllegalArgumentException e) {
+            long duration = System.currentTimeMillis() - startTime;
+            log.warn("[API] GET /projects/{}/wizard/answers 요청 실패 (404) - error={}, duration={}ms", 
+                    projectId, e.getMessage(), duration);
+            throw e;
+        } catch (Exception e) {
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("[API] GET /projects/{}/wizard/answers 요청 실패 (500) - duration={}ms", 
+                    projectId, duration, e);
+            throw e;
+        }
     }
 
     /**
@@ -101,11 +141,29 @@ public class WizardController {
             @Parameter(description = "프로젝트 ID") @PathVariable String projectId,
             @Parameter(description = "단계 ID") @PathVariable String stepId
     ) {
-        log.info("GET /projects/{}/wizard/steps/{}", projectId, stepId);
+        long startTime = System.currentTimeMillis();
+        log.info("[API] GET /projects/{}/wizard/steps/{} 요청 수신", projectId, stepId);
         
-        Map<String, Object> answers = wizardService.getStepAnswers(projectId, stepId);
-        
-        return ResponseEntity.ok(answers);
+        try {
+            Map<String, Object> answers = wizardService.getStepAnswers(projectId, stepId);
+            
+            long duration = System.currentTimeMillis() - startTime;
+            log.info("[API] GET /projects/{}/wizard/steps/{} 응답 완료 - fieldsCount={}, duration={}ms", 
+                    projectId, stepId, answers.size(), duration);
+            
+            return ResponseEntity.ok(answers);
+            
+        } catch (IllegalArgumentException e) {
+            long duration = System.currentTimeMillis() - startTime;
+            log.warn("[API] GET /projects/{}/wizard/steps/{} 요청 실패 (404) - error={}, duration={}ms", 
+                    projectId, stepId, e.getMessage(), duration);
+            throw e;
+        } catch (Exception e) {
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("[API] GET /projects/{}/wizard/steps/{} 요청 실패 (500) - duration={}ms", 
+                    projectId, stepId, duration, e);
+            throw e;
+        }
     }
 }
 
