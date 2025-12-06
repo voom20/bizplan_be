@@ -1,19 +1,21 @@
 package com.vibe.bizplan.bizplan_be.domain.service;
 
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.vibe.bizplan.bizplan_be.domain.entity.Project;
 import com.vibe.bizplan.bizplan_be.domain.model.TemplateCode;
 import com.vibe.bizplan.bizplan_be.dto.request.CreateProjectRequest;
 import com.vibe.bizplan.bizplan_be.dto.response.ProjectResponse;
 import com.vibe.bizplan.bizplan_be.dto.response.ProjectResponseMapper;
 import com.vibe.bizplan.bizplan_be.infrastructure.repository.ProjectRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
 
 /**
  * 프로젝트 서비스.
@@ -38,7 +40,6 @@ public class ProjectService {
      * @return 생성된 프로젝트 응답 DTO
      * @throws IllegalArgumentException 유효하지 않은 템플릿 코드인 경우
      */
-    @SuppressWarnings("null") // Spring Data save() 메서드의 null-safety 분석 오탐 억제
     @Transactional
     public ProjectResponse createProject(CreateProjectRequest request) {
         // [Stage 1] 요청 검증
