@@ -1,8 +1,6 @@
 package com.vibe.bizplan.bizplan_be.api;
 
 import com.vibe.bizplan.bizplan_be.domain.entity.User;
-import com.vibe.bizplan.bizplan_be.domain.model.BizPlanConstants;
-import com.vibe.bizplan.bizplan_be.domain.model.UserRole;
 import com.vibe.bizplan.bizplan_be.domain.service.ProjectService;
 import com.vibe.bizplan.bizplan_be.domain.service.TemplateService;
 import com.vibe.bizplan.bizplan_be.dto.request.CreateProjectRequest;
@@ -21,7 +19,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
