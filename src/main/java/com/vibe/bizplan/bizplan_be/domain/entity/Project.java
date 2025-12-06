@@ -2,6 +2,7 @@ package com.vibe.bizplan.bizplan_be.domain.entity;
 
 import com.vibe.bizplan.bizplan_be.domain.model.ProjectStatus;
 import com.vibe.bizplan.bizplan_be.domain.model.TemplateCode;
+import com.vibe.bizplan.bizplan_be.infrastructure.security.EncryptedStringConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -47,8 +48,9 @@ public class Project {
     @Column(name = "user_id", length = 36)
     private String userId;
 
-    /** Wizard 단계별 답변 데이터 (JSON 문자열) */
+    /** Wizard 단계별 답변 데이터 (JSON 문자열, AES-256 암호화) */
     @Column(name = "wizard_answers", columnDefinition = "TEXT")
+    @Convert(converter = EncryptedStringConverter.class)
     private String wizardAnswers;
 
     /** 생성일시 */
