@@ -19,8 +19,8 @@ alwaysApply: false
 
 ## Branch Strategy
 - ALWAYS create issue-specific branch before starting work
-- Branch naming: `<type>/<issue-number>-<short-description>`
-  - Examples: `feat/123-user-auth`, `fix/456-payment-bug`, `docs/789-api-guide`
+- Branch naming: `feature/<issue-number>_<short-description>`
+  - Examples: `feature/123_user-auth`, `feature/456_payment-fix`, `feature/789_api-docs`
 - Push branch to remote immediately: `git push -u origin <branch-name>`
 - Never commit directly to `main`, `master`, or `dev` branches
 

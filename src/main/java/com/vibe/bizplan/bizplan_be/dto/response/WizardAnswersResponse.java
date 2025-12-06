@@ -2,6 +2,7 @@ package com.vibe.bizplan.bizplan_be.dto.response;
 
 import java.util.Map;
 
+import com.vibe.bizplan.bizplan_be.domain.model.BizPlanConstants;
 import com.vibe.bizplan.bizplan_be.domain.model.TemplateCode;
 
 /**
@@ -34,7 +35,7 @@ public record WizardAnswersResponse(
      */
     public static WizardAnswersResponse of(String projectId, Map<String, Object> answers, TemplateCode templateCode) {
         int completedSteps = answers != null ? answers.size() : 0;
-        int totalSteps = templateCode != null ? templateCode.getTotalSteps() : 10;
+        int totalSteps = templateCode != null ? templateCode.getTotalSteps() : BizPlanConstants.DEFAULT_WIZARD_STEPS;
         return new WizardAnswersResponse(projectId, answers, completedSteps, totalSteps);
     }
 }

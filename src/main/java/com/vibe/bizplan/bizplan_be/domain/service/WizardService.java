@@ -1,10 +1,9 @@
 package com.vibe.bizplan.bizplan_be.domain.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vibe.bizplan.bizplan_be.domain.entity.Project;
+import com.vibe.bizplan.bizplan_be.domain.exception.ProjectNotFoundException;
 import com.vibe.bizplan.bizplan_be.domain.model.ProjectStatus;
+import com.vibe.bizplan.bizplan_be.domain.service.util.JsonParsingUtil;
 import com.vibe.bizplan.bizplan_be.dto.request.SaveWizardAnswersRequest;
 import com.vibe.bizplan.bizplan_be.dto.response.WizardAnswersResponse;
 import com.vibe.bizplan.bizplan_be.infrastructure.repository.ProjectRepository;
@@ -27,7 +26,7 @@ import java.util.Objects;
 public class WizardService {
 
     private final ProjectRepository projectRepository;
-    private final ObjectMapper objectMapper;
+    private final JsonParsingUtil jsonParsingUtil;
 
     /**
      * Wizard 답변 저장 (Upsert).
@@ -43,7 +42,7 @@ public class WizardService {
         Objects.requireNonNull(projectId, "프로젝트 ID는 필수입니다");
         Objects.requireNonNull(request, "요청 데이터는 필수입니다");
         String stepId = request.stepId();
-        int answersFieldCount = request.answers() != null ? request.answers().size() : 0;
+        int answersFieldCount = request.answers().size();
         
         log.info("[Wizard] 답변 저장 시작 - projectId={}, stepId={}, fieldsCount={}", 
                 projectId, stepId, answersFieldCount);
@@ -54,7 +53,7 @@ public class WizardService {
             Project project = projectRepository.findById(projectId)
                     .orElseThrow(() -> {
                         log.warn("[Wizard] 프로젝트 조회 실패 - projectId={} (존재하지 않음)", projectId);
-                        return new IllegalArgumentException("프로젝트를 찾을 수 없습니다: " + projectId);
+                        return new ProjectNotFoundException(projectId);
                     });
             
             String templateCode = project.getTemplateCode().name();
@@ -63,7 +62,7 @@ public class WizardService {
             
             // [Stage 3] 기존 답변 파싱 및 병합
             log.debug("[Wizard] 기존 답변 파싱 시작 - projectId={}, stepId={}", projectId, stepId);
-            Map<String, Object> existingAnswers = parseAnswers(project.getWizardAnswers());
+            Map<String, Object> existingAnswers = jsonParsingUtil.parseToMap(project.getWizardAnswers());
             int previousStepCount = existingAnswers.size();
             boolean isNewStep = !existingAnswers.containsKey(stepId);
             
@@ -73,7 +72,7 @@ public class WizardService {
             
             // [Stage 4] 데이터 저장 (JSON 변환 및 영속화)
             log.debug("[Wizard] 답변 저장 시작 - projectId={}, stepId={}", projectId, stepId);
-            String updatedJson = toJson(existingAnswers);
+            String updatedJson = jsonParsingUtil.toJson(existingAnswers);
             project.updateWizardAnswers(updatedJson);
             
             // 프로젝트 상태 업데이트 (DRAFT → IN_PROGRESS)
@@ -125,14 +124,14 @@ public class WizardService {
             Project project = projectRepository.findById(projectId)
                     .orElseThrow(() -> {
                         log.warn("[Wizard] 프로젝트 조회 실패 - projectId={} (존재하지 않음)", projectId);
-                        return new IllegalArgumentException("프로젝트를 찾을 수 없습니다: " + projectId);
+                        return new ProjectNotFoundException(projectId);
                     });
             
             String templateCode = project.getTemplateCode().name();
             log.debug("[Wizard] 프로젝트 조회 완료 - projectId={}, templateCode={}", projectId, templateCode);
             
             // [Stage 3] 답변 데이터 파싱
-            Map<String, Object> answers = parseAnswers(project.getWizardAnswers());
+            Map<String, Object> answers = jsonParsingUtil.parseToMap(project.getWizardAnswers());
             
             // [Stage 4] 응답 생성 및 완료 로깅
             WizardAnswersResponse response = WizardAnswersResponse.of(projectId, answers, project.getTemplateCode());
@@ -141,7 +140,7 @@ public class WizardService {
             
             return response;
             
-        } catch (IllegalArgumentException e) {
+        } catch (ProjectNotFoundException e) {
             log.error("[Wizard] 전체 답변 조회 실패 - projectId={}, error={}", projectId, e.getMessage());
             throw e;
         }
@@ -169,11 +168,11 @@ public class WizardService {
                     .orElseThrow(() -> {
                         log.warn("[Wizard] 프로젝트 조회 실패 - projectId={}, stepId={} (프로젝트 미존재)", 
                                 projectId, stepId);
-                        return new IllegalArgumentException("프로젝트를 찾을 수 없습니다: " + projectId);
+                        return new ProjectNotFoundException(projectId);
                     });
             
             // [Stage 3] 답변 데이터 파싱 및 추출
-            Map<String, Object> allAnswers = parseAnswers(project.getWizardAnswers());
+            Map<String, Object> allAnswers = jsonParsingUtil.parseToMap(project.getWizardAnswers());
             Object stepAnswers = allAnswers.get(stepId);
             
             // [Stage 4] 결과 반환
@@ -188,49 +187,10 @@ public class WizardService {
                     projectId, stepId);
             return new HashMap<>();
             
-        } catch (IllegalArgumentException e) {
+        } catch (ProjectNotFoundException e) {
             log.error("[Wizard] 단계별 답변 조회 실패 - projectId={}, stepId={}, error={}", 
                     projectId, stepId, e.getMessage());
             throw e;
-        }
-    }
-
-    /**
-     * JSON 문자열을 Map으로 파싱.
-     * 
-     * @param json JSON 문자열 (null 허용)
-     * @return 파싱된 Map, 실패 또는 null/빈 문자열인 경우 빈 HashMap 반환
-     */
-    private Map<String, Object> parseAnswers(String json) {
-        if (json == null || json.isBlank()) {
-            log.debug("[Wizard] JSON 파싱 스킵 - 데이터 없음 (null 또는 빈 문자열)");
-            return new HashMap<>();
-        }
-        try {
-            Map<String, Object> result = objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
-            log.debug("[Wizard] JSON 파싱 완료 - entriesCount={}", result.size());
-            return result;
-        } catch (JsonProcessingException e) {
-            log.error("[Wizard] JSON 파싱 실패 - jsonLength={}, error={}", json.length(), e.getMessage(), e);
-            return new HashMap<>();
-        }
-    }
-
-    /**
-     * Map을 JSON 문자열로 변환.
-     * 
-     * @param data 변환할 Map 데이터
-     * @return JSON 문자열
-     * @throws RuntimeException JSON 변환 실패 시
-     */
-    private String toJson(Map<String, Object> data) {
-        try {
-            String json = objectMapper.writeValueAsString(data);
-            log.debug("[Wizard] JSON 변환 완료 - entriesCount={}, jsonLength={}", data.size(), json.length());
-            return json;
-        } catch (JsonProcessingException e) {
-            log.error("[Wizard] JSON 변환 실패 - entriesCount={}, error={}", data.size(), e.getMessage(), e);
-            throw new RuntimeException("답변 데이터 변환에 실패했습니다", e);
         }
     }
 }

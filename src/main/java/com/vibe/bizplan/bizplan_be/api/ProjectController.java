@@ -1,5 +1,6 @@
 package com.vibe.bizplan.bizplan_be.api;
 
+import com.vibe.bizplan.bizplan_be.domain.entity.User;
 import com.vibe.bizplan.bizplan_be.domain.service.ProjectService;
 import com.vibe.bizplan.bizplan_be.domain.service.TemplateService;
 import com.vibe.bizplan.bizplan_be.dto.request.CreateProjectRequest;
@@ -11,12 +12,14 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -51,145 +54,116 @@ public class ProjectController {
             @Parameter(description = "템플릿 카테고리 필터 (government, bank, investor)")
             @RequestParam(required = false) String category
     ) {
-        long startTime = System.currentTimeMillis();
-        log.info("[API] GET /projects/templates 요청 수신 - category={}", category);
-        
-        try {
-            List<TemplateResponse> templates;
-            if (category != null && !category.isBlank()) {
-                templates = templateService.getTemplatesByCategory(category);
-            } else {
-                templates = templateService.getAllTemplates();
-            }
-            
-            long duration = System.currentTimeMillis() - startTime;
-            log.info("[API] GET /projects/templates 응답 완료 - category={}, count={}, duration={}ms", 
-                    category, templates.size(), duration);
-            
-            return ResponseEntity.ok(templates);
-            
-        } catch (Exception e) {
-            long duration = System.currentTimeMillis() - startTime;
-            log.error("[API] GET /projects/templates 요청 실패 - category={}, duration={}ms", 
-                    category, duration, e);
-            throw e;
+        List<TemplateResponse> templates;
+        if (category != null && !category.isBlank()) {
+            templates = templateService.getTemplatesByCategory(category);
+        } else {
+            templates = templateService.getAllTemplates();
         }
+        log.debug("[Project] 템플릿 조회 완료 - category={}, count={}", category, templates.size());
+        return ResponseEntity.ok(templates);
     }
 
     /**
      * 새 프로젝트 생성.
      * 선택된 템플릿으로 새 사업계획서 프로젝트를 생성한다.
+     * 인증된 사용자의 경우 해당 사용자의 프로젝트로 생성.
+     * MVP: 인증 없이도 기본 사용자로 생성 가능.
      *
      * @param request 프로젝트 생성 요청
+     * @param user 현재 인증된 사용자 (없을 수 있음)
      * @return 생성된 프로젝트 정보 (HTTP 201)
      */
     @PostMapping
     @Operation(summary = "프로젝트 생성", description = "선택된 템플릿으로 새 사업계획서 프로젝트를 생성합니다.")
+    @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "생성 성공",
                     content = @Content(schema = @Schema(implementation = ProjectResponse.class))),
-            @ApiResponse(responseCode = "400", description = "잘못된 요청 (유효하지 않은 템플릿 코드 등)")
+            @ApiResponse(responseCode = "400", description = "잘못된 요청 (유효하지 않은 템플릿 코드 등)"),
+            @ApiResponse(responseCode = "403", description = "프로젝트 생성 한도 초과")
     })
     public ResponseEntity<ProjectResponse> createProject(
-            @Valid @RequestBody CreateProjectRequest request
+            @Valid @RequestBody CreateProjectRequest request,
+            @AuthenticationPrincipal User user
     ) {
-        long startTime = System.currentTimeMillis();
-        String templateCode = request.templateCode();
-        String title = request.title();
-        
-        log.info("[API] POST /projects 요청 수신 - templateCode={}, title={}", templateCode, title);
-        
-        try {
-            ProjectResponse response = projectService.createProject(request);
-            
-            long duration = System.currentTimeMillis() - startTime;
-            log.info("[API] POST /projects 응답 완료 (201) - projectId={}, templateCode={}, duration={}ms", 
-                    response.projectId(), templateCode, duration);
-            
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-            
-        } catch (IllegalArgumentException e) {
-            long duration = System.currentTimeMillis() - startTime;
-            log.warn("[API] POST /projects 요청 실패 (400) - templateCode={}, error={}, duration={}ms", 
-                    templateCode, e.getMessage(), duration);
-            throw e;
-        } catch (Exception e) {
-            long duration = System.currentTimeMillis() - startTime;
-            log.error("[API] POST /projects 요청 실패 (500) - templateCode={}, duration={}ms", 
-                    templateCode, duration, e);
-            throw e;
+        ProjectResponse response;
+        if (user != null) {
+            // 인증된 사용자: 해당 사용자의 프로젝트로 생성
+            response = projectService.createProject(request, user.getId(), user.getRole());
+            log.debug("[Project] 프로젝트 생성 완료 - projectId={}, userId={}", 
+                    response.projectId(), user.getId());
+        } else {
+            // MVP: 기본 사용자로 생성
+            response = projectService.createProject(request);
+            log.debug("[Project] 프로젝트 생성 완료 (MVP) - projectId={}", response.projectId());
         }
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     /**
      * 프로젝트 상세 조회.
+     * 인증된 사용자의 경우 소유권 검증 수행.
+     * MVP: 인증 없이도 조회 가능.
      *
      * @param projectId 프로젝트 ID
+     * @param user 현재 인증된 사용자 (없을 수 있음)
      * @return 프로젝트 정보
      */
     @GetMapping("/{projectId}")
     @Operation(summary = "프로젝트 조회", description = "프로젝트 ID로 프로젝트 상세 정보를 조회합니다.")
+    @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공",
                     content = @Content(schema = @Schema(implementation = ProjectResponse.class))),
+            @ApiResponse(responseCode = "403", description = "접근 권한 없음"),
             @ApiResponse(responseCode = "404", description = "프로젝트를 찾을 수 없음")
     })
     public ResponseEntity<ProjectResponse> getProject(
-            @Parameter(description = "프로젝트 ID") @PathVariable String projectId
+            @Parameter(description = "프로젝트 ID") @PathVariable String projectId,
+            @AuthenticationPrincipal User user
     ) {
-        long startTime = System.currentTimeMillis();
-        log.info("[API] GET /projects/{} 요청 수신", projectId);
-        
-        try {
+        if (user != null) {
+            // 인증된 사용자: 소유권 검증
+            return projectService.getProject(projectId, user.getId(), user.getRole())
+                    .map(ResponseEntity::ok)
+                    .orElse(ResponseEntity.notFound().build());
+        } else {
+            // MVP: 검증 없이 조회
             return projectService.getProject(projectId)
-                    .map(response -> {
-                        long duration = System.currentTimeMillis() - startTime;
-                        log.info("[API] GET /projects/{} 응답 완료 (200) - templateCode={}, status={}, duration={}ms", 
-                                projectId, response.templateCode(), response.status(), duration);
-                        return ResponseEntity.ok(response);
-                    })
-                    .orElseGet(() -> {
-                        long duration = System.currentTimeMillis() - startTime;
-                        log.warn("[API] GET /projects/{} 응답 완료 (404) - duration={}ms", projectId, duration);
-                        return ResponseEntity.notFound().build();
-                    });
-                    
-        } catch (Exception e) {
-            long duration = System.currentTimeMillis() - startTime;
-            log.error("[API] GET /projects/{} 요청 실패 (500) - duration={}ms", projectId, duration, e);
-            throw e;
+                    .map(ResponseEntity::ok)
+                    .orElse(ResponseEntity.notFound().build());
         }
     }
 
     /**
      * 내 프로젝트 목록 조회.
-     * MVP에서는 기본 사용자의 프로젝트만 반환.
+     * 인증된 사용자의 경우 해당 사용자의 프로젝트 목록 반환.
+     * MVP: 기본 사용자의 프로젝트 반환.
      *
+     * @param user 현재 인증된 사용자 (없을 수 있음)
      * @return 프로젝트 목록
      */
     @GetMapping
     @Operation(summary = "내 프로젝트 목록", description = "현재 사용자의 프로젝트 목록을 조회합니다.")
+    @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공",
                     content = @Content(schema = @Schema(implementation = ProjectResponse.class)))
     })
-    public ResponseEntity<List<ProjectResponse>> getMyProjects() {
-        long startTime = System.currentTimeMillis();
-        log.info("[API] GET /projects 요청 수신");
-        
-        try {
-            List<ProjectResponse> projects = projectService.getMyProjects();
-            
-            long duration = System.currentTimeMillis() - startTime;
-            log.info("[API] GET /projects 응답 완료 - count={}, duration={}ms", projects.size(), duration);
-            
-            return ResponseEntity.ok(projects);
-            
-        } catch (Exception e) {
-            long duration = System.currentTimeMillis() - startTime;
-            log.error("[API] GET /projects 요청 실패 (500) - duration={}ms", duration, e);
-            throw e;
+    public ResponseEntity<List<ProjectResponse>> getMyProjects(
+            @AuthenticationPrincipal User user
+    ) {
+        List<ProjectResponse> projects;
+        if (user != null) {
+            // 인증된 사용자: 해당 사용자의 프로젝트
+            projects = projectService.getProjectsByUserId(user.getId());
+            log.debug("[Project] 프로젝트 목록 조회 완료 - userId={}, count={}", user.getId(), projects.size());
+        } else {
+            // MVP: 기본 사용자의 프로젝트
+            projects = projectService.getMyProjects();
+            log.debug("[Project] 프로젝트 목록 조회 완료 (MVP) - count={}", projects.size());
         }
+        return ResponseEntity.ok(projects);
     }
 }
-

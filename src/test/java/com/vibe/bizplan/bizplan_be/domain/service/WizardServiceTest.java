@@ -2,8 +2,10 @@ package com.vibe.bizplan.bizplan_be.domain.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vibe.bizplan.bizplan_be.domain.entity.Project;
+import com.vibe.bizplan.bizplan_be.domain.exception.ProjectNotFoundException;
 import com.vibe.bizplan.bizplan_be.domain.model.ProjectStatus;
 import com.vibe.bizplan.bizplan_be.domain.model.TemplateCode;
+import com.vibe.bizplan.bizplan_be.domain.service.util.JsonParsingUtil;
 import com.vibe.bizplan.bizplan_be.dto.request.SaveWizardAnswersRequest;
 import com.vibe.bizplan.bizplan_be.dto.response.WizardAnswersResponse;
 import com.vibe.bizplan.bizplan_be.infrastructure.repository.ProjectRepository;
@@ -41,12 +43,15 @@ class WizardServiceTest {
     private ProjectRepository projectRepository;
 
     @Spy
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private JsonParsingUtil jsonParsingUtil = new JsonParsingUtil(new ObjectMapper());
 
     @InjectMocks
     private WizardService wizardService;
 
     private Project testProject;
+    
+    // JSON 변환용 ObjectMapper (테스트 데이터 준비용)
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
@@ -154,15 +159,15 @@ class WizardServiceTest {
 
         @Test
         @DisplayName("존재하지 않는 프로젝트 ID로 저장 시 예외 발생")
-        void saveAnswers_WithNonExistingProjectId_ThrowsIllegalArgumentException() {
+        void saveAnswers_WithNonExistingProjectId_ThrowsProjectNotFoundException() {
             // given
             SaveWizardAnswersRequest request = new SaveWizardAnswersRequest("step1", Map.of());
             given(projectRepository.findById("non-existing-id")).willReturn(Optional.empty());
 
             // when & then
             assertThatThrownBy(() -> wizardService.saveAnswers("non-existing-id", request))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("프로젝트를 찾을 수 없습니다");
+                    .isInstanceOf(ProjectNotFoundException.class)
+                    .hasMessageContaining("프로젝트");
         }
     }
 

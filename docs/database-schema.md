@@ -8,15 +8,30 @@ BizPlan Backend 데이터베이스 스키마 문서입니다.
 erDiagram
     %% ==========================================
     %% BizPlan Backend Database Schema
-    %% Version: 1.0 (Flyway V3)
+    %% Version: 1.1 (Flyway V4)
     %% ==========================================
+
+    USERS {
+        VARCHAR_36 id PK "UUID 기본키"
+        VARCHAR_255 email UK "로그인 이메일"
+        VARCHAR_255 password_hash "BCrypt 해시 비밀번호"
+        VARCHAR_100 name "사용자 이름"
+        VARCHAR_200 company_name "회사/프로젝트명"
+        VARCHAR_20 phone "연락처"
+        VARCHAR_20 role "역할 (USER/PREMIUM/ADMIN)"
+        VARCHAR_20 status "상태 (ACTIVE/SUSPENDED/DELETED)"
+        TIMESTAMP last_login_at "마지막 로그인"
+        TIMESTAMP created_at "생성일시"
+        TIMESTAMP updated_at "수정일시"
+        TIMESTAMP deleted_at "삭제일시"
+    }
 
     PROJECTS {
         VARCHAR_36 id PK "UUID 기본키"
         VARCHAR_50 template_code "템플릿 코드"
         VARCHAR_255 title "프로젝트 제목"
         VARCHAR_20 status "상태"
-        VARCHAR_36 user_id "사용자 ID"
+        VARCHAR_36 user_id FK "사용자 ID"
         TEXT wizard_answers "Wizard 답변 JSON (암호화)"
         TIMESTAMP created_at "생성일시"
         TIMESTAMP updated_at "수정일시"
@@ -57,12 +72,57 @@ erDiagram
     }
 
     %% Relationships
+    USERS ||--o{ PROJECTS : "owns"
     PROJECTS ||--o{ BUSINESS_PLAN_DOCUMENTS : "has many"
 ```
 
 ## 테이블 상세
 
-### 1. projects
+### 1. users
+
+사용자 정보 및 인증을 관리하는 테이블입니다.
+
+| 컬럼명 | 타입 | NULL | 기본값 | 설명 |
+|--------|------|------|--------|------|
+| `id` | VARCHAR(36) | NO | - | UUID 기본키 |
+| `email` | VARCHAR(255) | NO | - | 로그인 이메일 (유니크) |
+| `password_hash` | VARCHAR(255) | NO | - | BCrypt 해시 비밀번호 |
+| `name` | VARCHAR(100) | YES | NULL | 사용자 이름 |
+| `company_name` | VARCHAR(200) | YES | NULL | 회사/프로젝트명 |
+| `phone` | VARCHAR(20) | YES | NULL | 연락처 |
+| `role` | VARCHAR(20) | NO | 'USER' | 역할 (ENUM) |
+| `status` | VARCHAR(20) | NO | 'ACTIVE' | 계정 상태 (ENUM) |
+| `last_login_at` | TIMESTAMP | YES | NULL | 마지막 로그인 시간 |
+| `created_at` | TIMESTAMP | NO | CURRENT_TIMESTAMP | 생성일시 |
+| `updated_at` | TIMESTAMP | NO | CURRENT_TIMESTAMP | 수정일시 |
+| `deleted_at` | TIMESTAMP | YES | NULL | 소프트 삭제 시간 |
+
+#### 인덱스
+
+| 인덱스명 | 컬럼 | 용도 |
+|----------|------|------|
+| `idx_users_email` | email | 로그인 시 이메일 조회 |
+| `idx_users_status` | status | 활성 사용자 필터링 |
+
+#### ENUM: UserRole
+
+```java
+USER,     // 일반 사용자 - 프로젝트 5개 제한
+PREMIUM,  // 프리미엄 사용자 - 무제한
+ADMIN     // 관리자 - 모든 권한
+```
+
+#### ENUM: UserStatus
+
+```java
+ACTIVE,    // 활성 상태
+SUSPENDED, // 정지 상태
+DELETED    // 삭제 상태 (소프트 삭제)
+```
+
+---
+
+### 2. projects
 
 사업계획서 프로젝트를 관리하는 핵심 테이블입니다.
 
@@ -106,7 +166,7 @@ INVESTOR_PITCH_2025  // 투자유치용 2025
 
 ---
 
-### 2. business_plan_documents
+### 3. business_plan_documents
 
 AI 엔진이 생성한 사업계획서 문서 섹션을 저장합니다.
 
@@ -157,7 +217,7 @@ FAILED       // 생성 실패
 
 ---
 
-### 3. flyway_schema_history
+### 4. flyway_schema_history
 
 Flyway 마이그레이션 이력을 관리하는 시스템 테이블입니다.
 
@@ -183,6 +243,7 @@ Flyway 마이그레이션 이력을 관리하는 시스템 테이블입니다.
 | V1 | `V1__create_project_table.sql` | projects 테이블 생성 |
 | V2 | `V2__add_wizard_answers_column.sql` | wizard_answers 컬럼 추가 |
 | V3 | `V3__create_business_plan_document_table.sql` | business_plan_documents 테이블 생성 |
+| V4 | `V4__create_users_table.sql` | users 테이블 생성 (JWT 인증용) |
 
 ---
 
@@ -205,7 +266,7 @@ Flyway 마이그레이션 이력을 관리하는 시스템 테이블입니다.
 
 ### Phase 2 (Post-MVP)
 
-1. **users 테이블 추가**
+1. ~~**users 테이블 추가**~~ ✅ 완료 (V4)
    - 사용자 인증/인가 관리
    - projects.user_id FK 연결
 
@@ -220,4 +281,8 @@ Flyway 마이그레이션 이력을 관리하는 시스템 테이블입니다.
 4. **audit_logs 테이블 추가**
    - 모든 데이터 변경 이력 추적
    - 컴플라이언스 대응
+
+5. **refresh_tokens 테이블 추가**
+   - Refresh Token 블랙리스트 관리
+   - 다중 디바이스 로그인 지원
 
