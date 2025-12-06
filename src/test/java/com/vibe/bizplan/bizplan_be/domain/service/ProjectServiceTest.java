@@ -257,5 +257,158 @@ class ProjectServiceTest {
                     .hasMessage("프로젝트 ID는 필수입니다");
         }
     }
+
+    @Nested
+    @DisplayName("createProject 엣지 케이스 테스트")
+    class CreateProjectEdgeCasesTest {
+
+        @Test
+        @DisplayName("빈 문자열 제목으로 프로젝트 생성 성공")
+        void createProject_WithEmptyTitle_ReturnsProjectResponse() {
+            // given
+            CreateProjectRequest request = new CreateProjectRequest("KSTARTUP_2025", "");
+            given(templateService.validateTemplateCode("KSTARTUP_2025")).willReturn(TemplateCode.KSTARTUP_2025);
+            given(projectRepository.save(any(Project.class))).willReturn(testProject);
+            given(projectResponseMapper.toResponse(testProject)).willReturn(testProjectResponse);
+
+            // when
+            ProjectResponse result = projectService.createProject(request);
+
+            // then
+            assertThat(result).isNotNull();
+            verify(projectRepository).save(any(Project.class));
+        }
+
+        @Test
+        @DisplayName("공백만 있는 제목으로 프로젝트 생성 시 제목 설정 안됨")
+        void createProject_WithBlankTitle_TitleNotSet() {
+            // given
+            CreateProjectRequest request = new CreateProjectRequest("KSTARTUP_2025", "   ");
+            given(templateService.validateTemplateCode("KSTARTUP_2025")).willReturn(TemplateCode.KSTARTUP_2025);
+            given(projectRepository.save(any(Project.class))).willReturn(testProject);
+            given(projectResponseMapper.toResponse(testProject)).willReturn(testProjectResponse);
+
+            // when
+            ProjectResponse result = projectService.createProject(request);
+
+            // then
+            assertThat(result).isNotNull();
+            verify(projectRepository).save(any(Project.class));
+        }
+
+        @Test
+        @DisplayName("모든 템플릿 코드로 프로젝트 생성 가능")
+        void createProject_WithAllTemplateTypes_Success() {
+            // given - BANK_LOAN_2025 템플릿
+            CreateProjectRequest bankRequest = new CreateProjectRequest("BANK_LOAN_2025", "은행 대출용");
+            given(templateService.validateTemplateCode("BANK_LOAN_2025")).willReturn(TemplateCode.BANK_LOAN_2025);
+            given(projectRepository.save(any(Project.class))).willReturn(testProject);
+            given(projectResponseMapper.toResponse(testProject)).willReturn(testProjectResponse);
+
+            // when
+            ProjectResponse result = projectService.createProject(bankRequest);
+
+            // then
+            assertThat(result).isNotNull();
+        }
+
+        @Test
+        @DisplayName("긴 제목으로 프로젝트 생성 성공")
+        void createProject_WithLongTitle_ReturnsProjectResponse() {
+            // given
+            String longTitle = "A".repeat(255); // 최대 길이 제목
+            CreateProjectRequest request = new CreateProjectRequest("KSTARTUP_2025", longTitle);
+            given(templateService.validateTemplateCode("KSTARTUP_2025")).willReturn(TemplateCode.KSTARTUP_2025);
+            given(projectRepository.save(any(Project.class))).willReturn(testProject);
+            given(projectResponseMapper.toResponse(testProject)).willReturn(testProjectResponse);
+
+            // when
+            ProjectResponse result = projectService.createProject(request);
+
+            // then
+            assertThat(result).isNotNull();
+            verify(projectRepository).save(any(Project.class));
+        }
+
+        @Test
+        @DisplayName("특수문자가 포함된 제목으로 프로젝트 생성 성공")
+        void createProject_WithSpecialCharactersInTitle_ReturnsProjectResponse() {
+            // given
+            String specialTitle = "테스트 프로젝트!@#$%^&*()_+-=[]{}|;':\",./<>?";
+            CreateProjectRequest request = new CreateProjectRequest("KSTARTUP_2025", specialTitle);
+            given(templateService.validateTemplateCode("KSTARTUP_2025")).willReturn(TemplateCode.KSTARTUP_2025);
+            given(projectRepository.save(any(Project.class))).willReturn(testProject);
+            given(projectResponseMapper.toResponse(testProject)).willReturn(testProjectResponse);
+
+            // when
+            ProjectResponse result = projectService.createProject(request);
+
+            // then
+            assertThat(result).isNotNull();
+            verify(projectRepository).save(any(Project.class));
+        }
+
+        @Test
+        @DisplayName("한글, 영어, 숫자 혼합 제목으로 프로젝트 생성 성공")
+        void createProject_WithMixedLanguageTitle_ReturnsProjectResponse() {
+            // given
+            String mixedTitle = "창업프로젝트 2025 Startup Plan";
+            CreateProjectRequest request = new CreateProjectRequest("KSTARTUP_2025", mixedTitle);
+            given(templateService.validateTemplateCode("KSTARTUP_2025")).willReturn(TemplateCode.KSTARTUP_2025);
+            given(projectRepository.save(any(Project.class))).willReturn(testProject);
+            given(projectResponseMapper.toResponse(testProject)).willReturn(testProjectResponse);
+
+            // when
+            ProjectResponse result = projectService.createProject(request);
+
+            // then
+            assertThat(result).isNotNull();
+            verify(projectRepository).save(any(Project.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("getMyProjects 엣지 케이스 테스트")
+    class GetMyProjectsEdgeCasesTest {
+
+        @Test
+        @DisplayName("여러 개의 프로젝트 목록 조회 성공")
+        void getMyProjects_WithMultipleProjects_ReturnsAllProjects() {
+            // given
+            Project project2 = Project.builder()
+                    .id("test-project-id-2")
+                    .templateCode(TemplateCode.BANK_LOAN_2025)
+                    .title("두 번째 프로젝트")
+                    .status(ProjectStatus.IN_PROGRESS)
+                    .userId("default-user")
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .build();
+            
+            ProjectResponse response2 = new ProjectResponse(
+                    "test-project-id-2",
+                    "BANK_LOAN_2025",
+                    "두 번째 프로젝트",
+                    ProjectStatus.IN_PROGRESS,
+                    Collections.emptyMap(),
+                    LocalDateTime.now(),
+                    LocalDateTime.now()
+            );
+            
+            List<Project> projects = List.of(testProject, project2);
+            List<ProjectResponse> responses = List.of(testProjectResponse, response2);
+            
+            given(projectRepository.findByUserId("default-user")).willReturn(projects);
+            given(projectResponseMapper.toResponseList(projects)).willReturn(responses);
+
+            // when
+            List<ProjectResponse> result = projectService.getMyProjects();
+
+            // then
+            assertThat(result).hasSize(2);
+            assertThat(result).extracting(ProjectResponse::projectId)
+                    .containsExactly("test-project-id", "test-project-id-2");
+        }
+    }
 }
 
