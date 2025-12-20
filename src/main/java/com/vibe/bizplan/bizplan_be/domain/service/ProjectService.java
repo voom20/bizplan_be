@@ -283,4 +283,39 @@ public class ProjectService {
     public ProjectResponse updateProject(String projectId, UpdateProjectRequest request) {
         return updateProject(projectId, request, BizPlanConstants.DEFAULT_USER_ID, UserRole.USER);
     }
+
+    /**
+     * 프로젝트 삭제.
+     * 프로젝트와 관련된 모든 데이터를 삭제한다.
+     *
+     * @param projectId 프로젝트 ID
+     * @param userId 요청자 사용자 ID
+     * @param userRole 요청자 역할
+     * @throws ProjectNotFoundException 프로젝트를 찾을 수 없는 경우
+     * @throws ResourceAccessDeniedException 접근 권한이 없는 경우
+     */
+    @Transactional
+    public void deleteProject(String projectId, String userId, UserRole userRole) {
+        Objects.requireNonNull(projectId, "프로젝트 ID는 필수입니다");
+        
+        log.info("[Project] 프로젝트 삭제 시작 - projectId={}, userId={}", projectId, userId);
+        
+        // 프로젝트 조회 및 소유권 검증
+        Project project = getProjectEntity(projectId, userId, userRole);
+        
+        // 프로젝트 삭제
+        projectRepository.delete(project);
+        
+        log.info("[Project] 프로젝트 삭제 완료 - projectId={}", projectId);
+    }
+
+    /**
+     * 프로젝트 삭제 (MVP 호환용 - 기본 사용자).
+     *
+     * @param projectId 프로젝트 ID
+     */
+    @Transactional
+    public void deleteProject(String projectId) {
+        deleteProject(projectId, BizPlanConstants.DEFAULT_USER_ID, UserRole.USER);
+    }
 }
