@@ -1,16 +1,23 @@
 package com.vibe.bizplan.bizplan_be.domain.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vibe.bizplan.bizplan_be.domain.entity.FinancialData;
 import com.vibe.bizplan.bizplan_be.domain.model.BizPlanConstants;
 import com.vibe.bizplan.bizplan_be.dto.request.FinancialAssumptionsRequest;
 import com.vibe.bizplan.bizplan_be.dto.response.FinancialProjectionResponse;
 import com.vibe.bizplan.bizplan_be.dto.response.FinancialProjectionResponse.*;
+import com.vibe.bizplan.bizplan_be.infrastructure.repository.FinancialDataRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 재무 추정 계산 서비스.
@@ -18,18 +25,23 @@ import java.util.List;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class FinancialCalculationService {
+
+    private final FinancialDataRepository financialDataRepository;
+    private final ObjectMapper objectMapper;
 
     private static final int SCALE = 2;
     private static final RoundingMode ROUNDING = RoundingMode.HALF_UP;
 
     /**
-     * 재무 추정 생성.
+     * 재무 추정 생성 및 저장.
      *
      * @param projectId 프로젝트 ID
      * @param assumptions 재무 가정 변수
      * @return 재무 추정 결과
      */
+    @Transactional
     public FinancialProjectionResponse generateProjection(String projectId, FinancialAssumptionsRequest assumptions) {
         log.info("재무 추정 시작: projectId={}, months={}", projectId, assumptions.projectionMonths());
         
@@ -42,9 +54,62 @@ public class FinancialCalculationService {
         // 유닛 이코노믹스 계산
         UnitEconomics unitEconomics = calculateUnitEconomics(assumptions, monthlyPLList);
         
+        FinancialProjectionResponse response = new FinancialProjectionResponse(
+                projectId, monthlyPLList, yearlySummaryList, unitEconomics);
+        
+        // 재무 데이터 저장
+        saveFinancialData(projectId, assumptions, response);
+        
         log.info("재무 추정 완료: projectId={}", projectId);
         
-        return new FinancialProjectionResponse(projectId, monthlyPLList, yearlySummaryList, unitEconomics);
+        return response;
+    }
+
+    /**
+     * 저장된 재무 데이터 조회.
+     *
+     * @param projectId 프로젝트 ID
+     * @return 재무 추정 결과 (Optional)
+     */
+    @Transactional(readOnly = true)
+    public Optional<FinancialProjectionResponse> getFinancials(String projectId) {
+        log.info("재무 데이터 조회: projectId={}", projectId);
+        
+        return financialDataRepository.findByProjectId(projectId)
+                .map(data -> {
+                    try {
+                        return objectMapper.readValue(data.getProjectionResult(), FinancialProjectionResponse.class);
+                    } catch (JsonProcessingException e) {
+                        log.error("재무 데이터 파싱 실패: projectId={}", projectId, e);
+                        return null;
+                    }
+                });
+    }
+
+    /**
+     * 재무 데이터 저장 (내부 메서드).
+     */
+    private void saveFinancialData(String projectId, FinancialAssumptionsRequest assumptions, 
+                                   FinancialProjectionResponse response) {
+        try {
+            String assumptionsJson = objectMapper.writeValueAsString(assumptions);
+            String projectionJson = objectMapper.writeValueAsString(response);
+            
+            Optional<FinancialData> existing = financialDataRepository.findByProjectId(projectId);
+            
+            if (existing.isPresent()) {
+                existing.get().update(assumptionsJson, projectionJson);
+                financialDataRepository.save(existing.get());
+                log.debug("재무 데이터 업데이트: projectId={}", projectId);
+            } else {
+                FinancialData newData = FinancialData.create(projectId, assumptionsJson, projectionJson);
+                financialDataRepository.save(newData);
+                log.debug("재무 데이터 생성: projectId={}", projectId);
+            }
+        } catch (JsonProcessingException e) {
+            log.error("재무 데이터 직렬화 실패: projectId={}", projectId, e);
+            throw new RuntimeException("재무 데이터 저장 실패", e);
+        }
     }
 
     /**
