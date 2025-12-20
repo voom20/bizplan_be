@@ -1,7 +1,9 @@
 package com.vibe.bizplan.bizplan_be.api;
 
 import com.vibe.bizplan.bizplan_be.domain.service.PmfService;
+import com.vibe.bizplan.bizplan_be.dto.request.AiPmfDiagnoseRequest;
 import com.vibe.bizplan.bizplan_be.dto.request.PmfSubmitRequest;
+import com.vibe.bizplan.bizplan_be.dto.response.AiPmfDiagnoseResponse;
 import com.vibe.bizplan.bizplan_be.dto.response.PmfQuestionsResponse;
 import com.vibe.bizplan.bizplan_be.dto.response.PmfReportResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -97,6 +99,71 @@ public class PmfController {
                 })
                 .orElseGet(() -> {
                     log.info("PMF 리포트 없음 - projectId={}", projectId);
+                    return ResponseEntity.notFound().build();
+                });
+    }
+
+    /**
+     * AI 기반 PMF 진단.
+     * 사업계획서 내용과 재무 데이터를 AI로 분석하여 PMF를 진단합니다.
+     *
+     * @param projectId 프로젝트 ID
+     * @param request 진단 요청 (선택)
+     * @return AI PMF 진단 결과
+     */
+    @PostMapping("/projects/{projectId}/pmf/ai-diagnose")
+    @Operation(
+            summary = "AI PMF 진단",
+            description = "사업계획서 내용과 재무 데이터를 AI로 분석하여 PMF를 진단합니다. " +
+                    "설문 기반 진단과 달리 AI가 자동으로 분석하여 점수, 리스크, 추천 사항을 제공합니다."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "진단 완료",
+                    content = @Content(schema = @Schema(implementation = AiPmfDiagnoseResponse.class))),
+            @ApiResponse(responseCode = "404", description = "프로젝트를 찾을 수 없음"),
+            @ApiResponse(responseCode = "500", description = "AI 엔진 오류")
+    })
+    public ResponseEntity<AiPmfDiagnoseResponse> aiDiagnose(
+            @Parameter(description = "프로젝트 ID") @PathVariable String projectId,
+            @Valid @RequestBody(required = false) AiPmfDiagnoseRequest request
+    ) {
+        log.info("POST /projects/{}/pmf/ai-diagnose - includeFinancialData={}",
+                projectId, request != null && request.isIncludeFinancialData());
+
+        AiPmfDiagnoseResponse response = pmfService.diagnosePmfWithAi(projectId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 저장된 AI PMF 진단 결과 조회.
+     *
+     * @param projectId 프로젝트 ID
+     * @return AI PMF 진단 결과 (없으면 404)
+     */
+    @GetMapping("/projects/{projectId}/pmf/ai-diagnose")
+    @Operation(
+            summary = "AI PMF 진단 결과 조회",
+            description = "저장된 AI PMF 진단 결과를 조회합니다."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = AiPmfDiagnoseResponse.class))),
+            @ApiResponse(responseCode = "404", description = "진단 결과 없음")
+    })
+    public ResponseEntity<AiPmfDiagnoseResponse> getAiDiagnoseResult(
+            @Parameter(description = "프로젝트 ID") @PathVariable String projectId
+    ) {
+        log.info("GET /projects/{}/pmf/ai-diagnose", projectId);
+
+        return pmfService.getAiDiagnoseResult(projectId)
+                .map(result -> {
+                    log.info("AI PMF 진단 결과 조회 완료 - projectId={}, score={}", projectId, result.overallScore());
+                    return ResponseEntity.ok(result);
+                })
+                .orElseGet(() -> {
+                    log.info("AI PMF 진단 결과 없음 - projectId={}", projectId);
                     return ResponseEntity.notFound().build();
                 });
     }
