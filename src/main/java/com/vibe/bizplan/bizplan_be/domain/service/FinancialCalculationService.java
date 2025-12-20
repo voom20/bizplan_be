@@ -87,6 +87,38 @@ public class FinancialCalculationService {
     }
 
     /**
+     * 재무 가정값만 저장 (시뮬레이션 재실행 없이).
+     *
+     * @param projectId 프로젝트 ID
+     * @param assumptions 재무 가정 변수
+     */
+    @Transactional
+    public void saveAssumptions(String projectId, FinancialAssumptionsRequest assumptions) {
+        log.info("재무 가정값 저장: projectId={}", projectId);
+        
+        try {
+            String assumptionsJson = objectMapper.writeValueAsString(assumptions);
+            
+            Optional<FinancialData> existing = financialDataRepository.findByProjectId(projectId);
+            
+            if (existing.isPresent()) {
+                // 기존 데이터가 있으면 가정값만 업데이트 (projection 결과는 유지)
+                existing.get().update(assumptionsJson, existing.get().getProjectionResult());
+                financialDataRepository.save(existing.get());
+                log.debug("재무 가정값 업데이트: projectId={}", projectId);
+            } else {
+                // 새로 생성 (projection 결과는 null)
+                FinancialData newData = FinancialData.create(projectId, assumptionsJson, null);
+                financialDataRepository.save(newData);
+                log.debug("재무 가정값 생성: projectId={}", projectId);
+            }
+        } catch (JsonProcessingException e) {
+            log.error("재무 가정값 직렬화 실패: projectId={}", projectId, e);
+            throw new RuntimeException("재무 가정값 저장 실패", e);
+        }
+    }
+
+    /**
      * 재무 데이터 저장 (내부 메서드).
      */
     private void saveFinancialData(String projectId, FinancialAssumptionsRequest assumptions, 

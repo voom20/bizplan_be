@@ -4,9 +4,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDateTime;
+import java.util.Map;
 
 import com.vibe.bizplan.bizplan_be.domain.service.FinancialCalculationService;
 import com.vibe.bizplan.bizplan_be.dto.request.FinancialAssumptionsRequest;
@@ -100,6 +104,39 @@ public class FinancialController {
                     log.info("재무 데이터 없음: projectId={}", projectId);
                     return ResponseEntity.notFound().build();
                 });
+    }
+
+    /**
+     * 재무 가정값 저장 (시뮬레이션 재실행 없이).
+     * 가정값만 저장하고 싶을 때 사용한다.
+     *
+     * @param projectId 프로젝트 ID
+     * @param request 재무 가정 변수
+     * @return 저장 결과
+     */
+    @PutMapping("/assumptions")
+    @Operation(
+            summary = "재무 가정값 저장",
+            description = "재무 가정값만 저장합니다. 시뮬레이션은 재실행하지 않습니다."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "저장 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 입력 변수")
+    })
+    public ResponseEntity<Map<String, Object>> saveAssumptions(
+            @Parameter(description = "프로젝트 ID") @PathVariable String projectId,
+            @Valid @RequestBody FinancialAssumptionsRequest request
+    ) {
+        log.info("PUT /projects/{}/financials/assumptions", projectId);
+        
+        financialCalculationService.saveAssumptions(projectId, request);
+        
+        log.info("재무 가정값 저장 완료: projectId={}", projectId);
+        
+        return ResponseEntity.ok(Map.of(
+                "message", "저장되었습니다.",
+                "updatedAt", LocalDateTime.now().toString()
+        ));
     }
 
 }
