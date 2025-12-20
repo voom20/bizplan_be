@@ -206,4 +206,37 @@ public class ProjectController {
         }
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * 프로젝트 삭제.
+     * 인증된 사용자의 경우 소유권 검증 수행.
+     * MVP: 인증 없이도 삭제 가능.
+     *
+     * @param projectId 프로젝트 ID
+     * @param user 현재 인증된 사용자 (없을 수 있음)
+     * @return 204 No Content
+     */
+    @DeleteMapping("/{projectId}")
+    @Operation(summary = "프로젝트 삭제", description = "프로젝트를 삭제합니다.")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "삭제 성공"),
+            @ApiResponse(responseCode = "403", description = "접근 권한 없음"),
+            @ApiResponse(responseCode = "404", description = "프로젝트를 찾을 수 없음")
+    })
+    public ResponseEntity<Void> deleteProject(
+            @Parameter(description = "프로젝트 ID") @PathVariable String projectId,
+            @AuthenticationPrincipal User user
+    ) {
+        if (user != null) {
+            // 인증된 사용자: 소유권 검증
+            projectService.deleteProject(projectId, user.getId(), user.getRole());
+            log.debug("[Project] 프로젝트 삭제 완료 - projectId={}, userId={}", projectId, user.getId());
+        } else {
+            // MVP: 검증 없이 삭제
+            projectService.deleteProject(projectId);
+            log.debug("[Project] 프로젝트 삭제 완료 (MVP) - projectId={}", projectId);
+        }
+        return ResponseEntity.noContent().build();
+    }
 }
