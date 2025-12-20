@@ -15,6 +15,7 @@ import com.vibe.bizplan.bizplan_be.domain.model.BizPlanConstants;
 import com.vibe.bizplan.bizplan_be.domain.model.TemplateCode;
 import com.vibe.bizplan.bizplan_be.domain.model.UserRole;
 import com.vibe.bizplan.bizplan_be.dto.request.CreateProjectRequest;
+import com.vibe.bizplan.bizplan_be.dto.request.UpdateProjectRequest;
 import com.vibe.bizplan.bizplan_be.dto.response.ProjectResponse;
 import com.vibe.bizplan.bizplan_be.dto.response.ProjectResponseMapper;
 import com.vibe.bizplan.bizplan_be.infrastructure.repository.ProjectRepository;
@@ -228,5 +229,58 @@ public class ProjectService {
         }
         
         return project;
+    }
+
+    /**
+     * 프로젝트 수정.
+     * 제공된 필드만 업데이트하며, null 값은 무시된다.
+     *
+     * @param projectId 프로젝트 ID
+     * @param request 수정 요청 DTO
+     * @param userId 요청자 사용자 ID
+     * @param userRole 요청자 역할
+     * @return 수정된 프로젝트 응답 DTO
+     * @throws ProjectNotFoundException 프로젝트를 찾을 수 없는 경우
+     * @throws ResourceAccessDeniedException 접근 권한이 없는 경우
+     */
+    @Transactional
+    public ProjectResponse updateProject(String projectId, UpdateProjectRequest request, 
+                                         String userId, UserRole userRole) {
+        Objects.requireNonNull(projectId, "프로젝트 ID는 필수입니다");
+        Objects.requireNonNull(request, "요청 데이터는 필수입니다");
+        
+        log.info("[Project] 프로젝트 수정 시작 - projectId={}, userId={}", projectId, userId);
+        
+        // 프로젝트 조회 및 소유권 검증
+        Project project = getProjectEntity(projectId, userId, userRole);
+        
+        // 제공된 필드만 업데이트
+        if (request.title() != null) {
+            project.updateTitle(request.title());
+            log.debug("[Project] 제목 업데이트 - projectId={}, newTitle={}", projectId, request.title());
+        }
+        
+        if (request.status() != null) {
+            project.changeStatus(request.status());
+            log.debug("[Project] 상태 업데이트 - projectId={}, newStatus={}", projectId, request.status());
+        }
+        
+        Project savedProject = projectRepository.save(project);
+        ProjectResponse response = projectResponseMapper.toResponse(savedProject);
+        
+        log.info("[Project] 프로젝트 수정 완료 - projectId={}", projectId);
+        return response;
+    }
+
+    /**
+     * 프로젝트 수정 (MVP 호환용 - 기본 사용자).
+     *
+     * @param projectId 프로젝트 ID
+     * @param request 수정 요청 DTO
+     * @return 수정된 프로젝트 응답 DTO
+     */
+    @Transactional
+    public ProjectResponse updateProject(String projectId, UpdateProjectRequest request) {
+        return updateProject(projectId, request, BizPlanConstants.DEFAULT_USER_ID, UserRole.USER);
     }
 }
