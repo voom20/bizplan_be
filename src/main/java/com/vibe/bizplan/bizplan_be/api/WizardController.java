@@ -1,8 +1,11 @@
 package com.vibe.bizplan.bizplan_be.api;
 
+import com.vibe.bizplan.bizplan_be.domain.service.ProjectService;
 import com.vibe.bizplan.bizplan_be.domain.service.WizardService;
+import com.vibe.bizplan.bizplan_be.domain.service.WizardStepsService;
 import com.vibe.bizplan.bizplan_be.dto.request.SaveWizardAnswersRequest;
 import com.vibe.bizplan.bizplan_be.dto.response.WizardAnswersResponse;
+import com.vibe.bizplan.bizplan_be.dto.response.WizardStepsResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -30,6 +33,32 @@ import java.util.Map;
 public class WizardController {
 
     private final WizardService wizardService;
+    private final WizardStepsService wizardStepsService;
+    private final ProjectService projectService;
+
+    /**
+     * 위저드 단계 정의 조회.
+     * 프로젝트 템플릿에 해당하는 위저드 단계 및 질문 정의를 반환한다.
+     *
+     * @param projectId 프로젝트 ID
+     * @return 위저드 단계 정의
+     */
+    @GetMapping("/steps")
+    @Operation(summary = "위저드 단계 정의 조회", description = "프로젝트 템플릿에 해당하는 위저드 단계 및 질문 정의를 반환합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = WizardStepsResponse.class))),
+            @ApiResponse(responseCode = "404", description = "프로젝트를 찾을 수 없음")
+    })
+    public ResponseEntity<WizardStepsResponse> getWizardSteps(
+            @Parameter(description = "프로젝트 ID") @PathVariable String projectId
+    ) {
+        var project = projectService.getProjectEntity(projectId);
+        WizardStepsResponse response = wizardStepsService.getWizardSteps(project.getTemplateCode());
+        log.debug("[Wizard] 위저드 단계 정의 조회 완료 - projectId={}, templateCode={}, totalSteps={}", 
+                projectId, project.getTemplateCode(), response.totalSteps());
+        return ResponseEntity.ok(response);
+    }
 
     /**
      * Wizard 답변 저장 (Upsert).
