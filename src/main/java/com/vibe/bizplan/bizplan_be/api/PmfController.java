@@ -4,8 +4,11 @@ import com.vibe.bizplan.bizplan_be.domain.service.PmfService;
 import com.vibe.bizplan.bizplan_be.dto.request.AiPmfDiagnoseRequest;
 import com.vibe.bizplan.bizplan_be.dto.request.PmfSubmitRequest;
 import com.vibe.bizplan.bizplan_be.dto.response.AiPmfDiagnoseResponse;
+import com.vibe.bizplan.bizplan_be.dto.response.PmfCriteriaListResponse;
 import com.vibe.bizplan.bizplan_be.dto.response.PmfQuestionsResponse;
 import com.vibe.bizplan.bizplan_be.dto.response.PmfReportResponse;
+import com.vibe.bizplan.bizplan_be.infrastructure.client.AiEngineClient;
+import com.vibe.bizplan.bizplan_be.infrastructure.client.dto.PmfCriteriaResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -31,6 +34,7 @@ import org.springframework.web.bind.annotation.*;
 public class PmfController {
 
     private final PmfService pmfService;
+    private final AiEngineClient aiEngineClient;
 
     /**
      * PMF 설문 질문 목록 조회.
@@ -166,6 +170,32 @@ public class PmfController {
                     log.info("AI PMF 진단 결과 없음 - projectId={}", projectId);
                     return ResponseEntity.notFound().build();
                 });
+    }
+
+    /**
+     * PMF 평가 기준 조회.
+     * AI Engine에서 PMF 진단에 사용되는 평가 기준 목록을 조회합니다.
+     *
+     * @return PMF 평가 기준 목록
+     */
+    @GetMapping("/pmf/criteria")
+    @Operation(
+            summary = "PMF 평가 기준 조회",
+            description = "PMF 진단에 사용되는 평가 기준(카테고리, 가중치 등) 목록을 조회합니다."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = PmfCriteriaListResponse.class))),
+            @ApiResponse(responseCode = "500", description = "AI 엔진 오류")
+    })
+    public ResponseEntity<PmfCriteriaListResponse> getPmfCriteria() {
+        log.info("GET /pmf/criteria");
+
+        PmfCriteriaResponse aiResponse = aiEngineClient.getPmfCriteria();
+        PmfCriteriaListResponse response = PmfCriteriaListResponse.from(aiResponse);
+
+        log.info("PMF 평가 기준 조회 완료: count={}", response.criteria().size());
+        return ResponseEntity.ok(response);
     }
 }
 

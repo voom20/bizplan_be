@@ -2,8 +2,10 @@ package com.vibe.bizplan.bizplan_be.infrastructure.client;
 
 import com.vibe.bizplan.bizplan_be.infrastructure.client.dto.BizPlanGenerateRequest;
 import com.vibe.bizplan.bizplan_be.infrastructure.client.dto.BizPlanGenerateResponse;
+import com.vibe.bizplan.bizplan_be.infrastructure.client.dto.PmfCriteriaResponse;
 import com.vibe.bizplan.bizplan_be.infrastructure.client.dto.PmfDiagnoseRequest;
 import com.vibe.bizplan.bizplan_be.infrastructure.client.dto.PmfDiagnoseResponse;
+import com.vibe.bizplan.bizplan_be.infrastructure.client.dto.SectionTypesResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -105,6 +107,60 @@ public class AiEngineClient {
             log.error("AI 엔진 PMF 진단 실패: projectId={}, error={}",
                     request.projectId(), e.getMessage());
             throw new AiEngineException("AI 엔진 PMF 진단에 실패했습니다: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 사업계획서 섹션 타입 목록 조회.
+     *
+     * @return 섹션 타입 목록
+     * @throws AiEngineException AI 엔진 호출 실패 시
+     */
+    public SectionTypesResponse getSectionTypes() {
+        log.info("AI 엔진 섹션 타입 목록 조회");
+        
+        try {
+            @SuppressWarnings("null")
+            SectionTypesResponse response = restClient.get()
+                    .uri("/api/v1/bizplan/sections")
+                    .retrieve()
+                    .body(SectionTypesResponse.class);
+            
+            log.info("AI 엔진 섹션 타입 목록 조회 완료: count={}",
+                    response != null && response.sectionTypes() != null ? response.sectionTypes().size() : 0);
+            
+            return response;
+            
+        } catch (RestClientException e) {
+            log.error("AI 엔진 섹션 타입 목록 조회 실패: error={}", e.getMessage());
+            throw new AiEngineException("AI 엔진 섹션 타입 목록 조회에 실패했습니다: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * PMF 평가 기준 목록 조회.
+     *
+     * @return PMF 평가 기준 목록
+     * @throws AiEngineException AI 엔진 호출 실패 시
+     */
+    public PmfCriteriaResponse getPmfCriteria() {
+        log.info("AI 엔진 PMF 평가 기준 조회");
+        
+        try {
+            @SuppressWarnings("null")
+            PmfCriteriaResponse response = restClient.get()
+                    .uri("/api/v1/pmf/criteria")
+                    .retrieve()
+                    .body(PmfCriteriaResponse.class);
+            
+            log.info("AI 엔진 PMF 평가 기준 조회 완료: count={}",
+                    response != null && response.criteria() != null ? response.criteria().size() : 0);
+            
+            return response;
+            
+        } catch (RestClientException e) {
+            log.error("AI 엔진 PMF 평가 기준 조회 실패: error={}", e.getMessage());
+            throw new AiEngineException("AI 엔진 PMF 평가 기준 조회에 실패했습니다: " + e.getMessage(), e);
         }
     }
 
