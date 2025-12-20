@@ -1,8 +1,8 @@
 # SRS 요구사항 대조표 및 테스트 인증서
 
-> **인증 ID**: CERT-TEST-2025-1206-001  
+> **인증 ID**: CERT-TEST-2025-1220-001  
 > **프로젝트**: AI Co-Pilot for First-time Founders (Backend)  
-> **인증일**: 2025년 12월 6일  
+> **인증일**: 2025년 12월 20일  
 > **담당자**: Development Team
 
 ---
@@ -50,7 +50,7 @@
 ║   ├─ Java: OpenJDK 21.0.9                                                        ║
 ║   ├─ Spring Boot: 3.5.8                                                          ║
 ║   ├─ Gradle: 8.5                                                                 ║
-║   └─ 실행 시각: 2025-12-06 14:39:05 KST                                          ║
+║   └─ 실행 시각: 2025-12-20 15:16:25 KST                                          ║
 ║                                                                                  ║
 ╚══════════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -72,6 +72,8 @@
 | **REQ-FUNC-AUTH** | 사용자 인증 | TC-FUNC-AUTH | `UserServiceTest` | 18 | 🟢 PASS |
 | **REQ-NF-RBAC** | 프로젝트 접근 제어 | TC-NF-RBAC | `ProjectSecurityCheckerTest` | 19 | 🟢 PASS |
 | **API 검증** | REST API 엔드포인트 | TC-INT-001 | `ProjectControllerIntegrationTest` | 10 | 🟢 PASS |
+| **API 검증** | Wizard API 엔드포인트 | TC-INT-002 | `WizardControllerIntegrationTest` | 16 | 🟢 PASS |
+| **API 검증** | 문서 내보내기 API | TC-INT-003 | `ExportControllerIntegrationTest` | 13 | 🟢 PASS |
 
 ### 요구사항별 상세 매핑
 
@@ -282,8 +284,8 @@
 ║   ┌────────────────────────────────────────────────────────────────────┐    ║
 ║   │                                                                    │    ║
 ║   │   프로젝트명:    bizplan_be (Backend Core)                         │    ║
-║   │   브랜치:        develop (PR #46 머지 완료)                        │    ║
-║   │   커밋 해시:     7951133                                           │    ║
+║   │   브랜치:        develop (PR #70 머지 완료)                        │    ║
+║   │   커밋 해시:     268dbef                                           │    ║
 ║   │                                                                    │    ║
 ║   │   테스트 수:     176개                                             │    ║
 ║   │   통과:          176개                                             │    ║
@@ -292,7 +294,7 @@
 ║   │                                                                    │    ║
 ║   │   성공률:        100% ✅                                           │    ║
 ║   │                                                                    │    ║
-║   │   실행 일시:     2025-12-06 14:39:05 KST                           │    ║
+║   │   실행 일시:     2025-12-20 15:16:25 KST                           │    ║
 ║   │   실행 환경:     macOS / OpenJDK 21.0.9 / Gradle 8.5               │    ║
 ║   │                                                                    │    ║
 ║   └────────────────────────────────────────────────────────────────────┘    ║
@@ -320,6 +322,6 @@
 
 ---
 
-*문서 생성일: 2025-12-06 14:39:05 KST*  
-*인증 ID: CERT-TEST-2025-1206-001*
+*문서 생성일: 2025-12-20 15:16:25 KST*  
+*인증 ID: CERT-TEST-2025-1220-001*
 
