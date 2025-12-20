@@ -8,7 +8,7 @@ BizPlan Backend 데이터베이스 스키마 문서입니다.
 erDiagram
     %% ==========================================
     %% BizPlan Backend Database Schema
-    %% Version: 1.1 (Flyway V4)
+    %% Version: 1.2 (Flyway V6)
     %% ==========================================
 
     USERS {
@@ -58,6 +58,28 @@ erDiagram
         TIMESTAMP updated_at "수정일시"
     }
 
+    FINANCIAL_DATA {
+        VARCHAR_36 id PK "UUID 기본키"
+        VARCHAR_36 project_id FK "프로젝트 ID (유니크)"
+        TEXT assumptions "재무 가정값 JSON"
+        TEXT projection_result "계산된 추정 결과 JSON"
+        TIMESTAMP created_at "생성일시"
+        TIMESTAMP updated_at "수정일시"
+    }
+
+    BIZPLAN_SECTIONS {
+        VARCHAR_36 id PK "UUID 기본키"
+        VARCHAR_36 project_id FK "프로젝트 ID"
+        VARCHAR_50 section_type "섹션 타입"
+        VARCHAR_255 title "섹션 제목"
+        TEXT content "섹션 내용"
+        INT word_count "글자 수"
+        VARCHAR_100 model_used "사용된 AI 모델"
+        INT generation_time_ms "생성 소요시간"
+        TIMESTAMP created_at "생성일시"
+        TIMESTAMP updated_at "수정일시"
+    }
+
     FLYWAY_SCHEMA_HISTORY {
         INT installed_rank PK "설치 순위"
         VARCHAR version "버전"
@@ -74,6 +96,8 @@ erDiagram
     %% Relationships
     USERS ||--o{ PROJECTS : "owns"
     PROJECTS ||--o{ BUSINESS_PLAN_DOCUMENTS : "has many"
+    PROJECTS ||--o| FINANCIAL_DATA : "has one"
+    PROJECTS ||--o{ BIZPLAN_SECTIONS : "has many"
 ```
 
 ## 테이블 상세
@@ -217,7 +241,82 @@ FAILED       // 생성 실패
 
 ---
 
-### 4. flyway_schema_history
+### 4. financial_data
+
+재무 가정값과 추정 결과를 저장하는 테이블입니다.
+
+| 컬럼명 | 타입 | NULL | 기본값 | 설명 |
+|--------|------|------|--------|------|
+| `id` | VARCHAR(36) | NO | - | UUID 기본키 |
+| `project_id` | VARCHAR(36) | NO | - | 프로젝트 FK (유니크) |
+| `assumptions` | TEXT | NO | - | 재무 가정값 JSON |
+| `projection_result` | TEXT | YES | NULL | 계산된 추정 결과 JSON |
+| `created_at` | TIMESTAMP | NO | CURRENT_TIMESTAMP | 생성일시 |
+| `updated_at` | TIMESTAMP | NO | CURRENT_TIMESTAMP | 수정일시 |
+
+#### 인덱스
+
+| 인덱스명 | 컬럼 | 용도 |
+|----------|------|------|
+| `uk_financial_project` | project_id | 프로젝트당 하나의 재무 데이터 |
+
+#### 제약조건
+
+| 제약조건명 | 타입 | 설명 |
+|------------|------|------|
+| `fk_financial_project` | FOREIGN KEY | project_id → projects(id), CASCADE DELETE |
+
+---
+
+### 5. bizplan_sections
+
+AI가 생성한 사업계획서 섹션을 저장하는 테이블입니다.
+
+| 컬럼명 | 타입 | NULL | 기본값 | 설명 |
+|--------|------|------|--------|------|
+| `id` | VARCHAR(36) | NO | - | UUID 기본키 |
+| `project_id` | VARCHAR(36) | NO | - | 프로젝트 FK |
+| `section_type` | VARCHAR(50) | NO | - | 섹션 타입 코드 |
+| `title` | VARCHAR(255) | NO | - | 섹션 제목 |
+| `content` | TEXT | NO | - | 섹션 내용 |
+| `word_count` | INT | YES | 0 | 글자 수 |
+| `model_used` | VARCHAR(100) | YES | NULL | 사용된 AI 모델 |
+| `generation_time_ms` | INT | YES | NULL | AI 생성 소요시간 (ms) |
+| `created_at` | TIMESTAMP | NO | CURRENT_TIMESTAMP | 생성일시 |
+| `updated_at` | TIMESTAMP | NO | CURRENT_TIMESTAMP | 수정일시 |
+
+#### 인덱스
+
+| 인덱스명 | 컬럼 | 용도 |
+|----------|------|------|
+| `uk_project_section` | project_id, section_type | 프로젝트당 섹션 유일성 |
+| `idx_bizplan_sections_project_id` | project_id | 프로젝트별 섹션 조회 |
+| `idx_bizplan_sections_section_type` | section_type | 섹션 타입별 조회 |
+
+#### 제약조건
+
+| 제약조건명 | 타입 | 설명 |
+|------------|------|------|
+| `fk_bizplan_sections_project` | FOREIGN KEY | project_id → projects(id), CASCADE DELETE |
+
+#### ENUM: SectionType
+
+```java
+EXECUTIVE_SUMMARY,    // 사업개요
+PROBLEM_DEFINITION,   // 문제 정의
+SOLUTION,             // 솔루션
+MARKET_ANALYSIS,      // 시장 분석
+BUSINESS_MODEL,       // 비즈니스 모델
+COMPETITIVE_ANALYSIS, // 경쟁 분석
+MARKETING_STRATEGY,   // 마케팅 전략
+TEAM,                 // 팀 소개
+FINANCIAL_PLAN,       // 재무 계획
+MILESTONES            // 마일스톤
+```
+
+---
+
+### 6. flyway_schema_history
 
 Flyway 마이그레이션 이력을 관리하는 시스템 테이블입니다.
 
@@ -244,6 +343,8 @@ Flyway 마이그레이션 이력을 관리하는 시스템 테이블입니다.
 | V2 | `V2__add_wizard_answers_column.sql` | wizard_answers 컬럼 추가 |
 | V3 | `V3__create_business_plan_document_table.sql` | business_plan_documents 테이블 생성 |
 | V4 | `V4__create_users_table.sql` | users 테이블 생성 (JWT 인증용) |
+| V5 | `V5__create_financial_data_table.sql` | financial_data 테이블 생성 |
+| V6 | `V6__create_bizplan_sections_table.sql` | bizplan_sections 테이블 생성 |
 
 ---
 
@@ -270,19 +371,23 @@ Flyway 마이그레이션 이력을 관리하는 시스템 테이블입니다.
    - 사용자 인증/인가 관리
    - projects.user_id FK 연결
 
-2. **workspaces 테이블 추가**
+2. ~~**financial_data 테이블 추가**~~ ✅ 완료 (V5)
+   - 재무 가정값 및 추정 결과 저장
+   - 프로젝트당 1:1 관계
+
+3. ~~**bizplan_sections 테이블 추가**~~ ✅ 완료 (V6)
+   - AI 생성 섹션 개별 저장
+   - 섹션별 수정/재생성 지원
+
+4. **workspaces 테이블 추가**
    - 멀티 워크스페이스 지원
    - 데이터 격리 강화
 
-3. **financial_projections 테이블 추가**
-   - 재무 추정 데이터 영구 저장
-   - 버전 관리
-
-4. **audit_logs 테이블 추가**
+5. **audit_logs 테이블 추가**
    - 모든 데이터 변경 이력 추적
    - 컴플라이언스 대응
 
-5. **refresh_tokens 테이블 추가**
+6. **refresh_tokens 테이블 추가**
    - Refresh Token 블랙리스트 관리
    - 다중 디바이스 로그인 지원
 
