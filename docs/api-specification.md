@@ -23,8 +23,10 @@ BizPlan Backend REST API 명세서입니다.
 4. [Wizard API](#4-wizard-api) - Wizard 답변 관리
 5. [Financials API](#5-financials-api) - 재무 추정
 6. [Business Plan Documents API](#6-business-plan-documents-api) - 사업계획서 생성
-7. [Export API](#7-export-api) - 문서 내보내기
-8. [Actuator API](#8-actuator-api) - 모니터링
+7. [BizPlan Sections API](#7-bizplan-sections-api) - AI 섹션 생성/관리
+8. [PMF API](#8-pmf-api) - Product-Market Fit 진단
+9. [Export API](#9-export-api) - 문서 내보내기
+10. [Actuator API](#10-actuator-api) - 모니터링
 
 ---
 
@@ -512,11 +514,146 @@ GET /projects
 
 ---
 
+### 3.5 프로젝트 수정
+
+프로젝트 제목 및 상태를 수정합니다.
+
+```
+PATCH /projects/{projectId}
+```
+
+**Path Parameters**
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| projectId | string (UUID) | 프로젝트 ID |
+
+**Request Body**
+
+```json
+{
+  "title": "수정된 프로젝트 제목",
+  "status": "IN_PROGRESS"
+}
+```
+
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| title | string | ❌ | 프로젝트 제목 (최대 255자) |
+| status | string | ❌ | 프로젝트 상태 (ENUM) |
+
+**Response 200**
+
+```json
+{
+  "projectId": "550e8400-e29b-41d4-a716-446655440000",
+  "templateCode": "KSTARTUP_2025",
+  "title": "수정된 프로젝트 제목",
+  "status": "IN_PROGRESS",
+  "wizardAnswers": {},
+  "createdAt": "2025-12-06T10:30:00",
+  "updatedAt": "2025-12-06T12:00:00"
+}
+```
+
+**Errors**
+
+| 상태코드 | 설명 |
+|----------|------|
+| 403 | 접근 권한 없음 |
+| 404 | 프로젝트를 찾을 수 없음 |
+
+---
+
+### 3.6 프로젝트 삭제
+
+프로젝트를 삭제합니다. 관련된 모든 데이터가 함께 삭제됩니다.
+
+```
+DELETE /projects/{projectId}
+```
+
+**Path Parameters**
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| projectId | string (UUID) | 프로젝트 ID |
+
+**Response 204**
+
+No Content
+
+**Errors**
+
+| 상태코드 | 설명 |
+|----------|------|
+| 403 | 접근 권한 없음 |
+| 404 | 프로젝트를 찾을 수 없음 |
+
+---
+
 ## 4. Wizard API
 
 Wizard 단계별 답변 저장 및 조회
 
-### 4.1 답변 저장
+### 4.1 단계 정의 조회
+
+템플릿별 Wizard 단계 및 질문 정의를 조회합니다.
+
+```
+GET /projects/{projectId}/wizard/steps
+```
+
+**Path Parameters**
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| projectId | string (UUID) | 프로젝트 ID |
+
+**Response 200**
+
+```json
+{
+  "templateCode": "PRE_STARTUP",
+  "totalSteps": 5,
+  "steps": [
+    {
+      "id": 1,
+      "title": "사업 아이디어",
+      "description": "사업 아이디어를 설명해주세요",
+      "questions": [
+        {
+          "id": "business-name",
+          "type": "text",
+          "label": "사업명",
+          "placeholder": "사업명을 입력하세요",
+          "required": true,
+          "maxLength": 100
+        },
+        {
+          "id": "business-description",
+          "type": "textarea",
+          "label": "사업 설명",
+          "placeholder": "사업 아이디어를 설명해주세요",
+          "required": true,
+          "maxLength": 1000
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Errors**
+
+| 상태코드 | 설명 |
+|----------|------|
+| 400 | 잘못된 템플릿 코드 |
+| 404 | 프로젝트를 찾을 수 없음 |
+
+---
+
+### 4.2 답변 저장
 
 특정 단계의 답변을 저장합니다. 기존 답변과 병합됩니다.
 
@@ -627,7 +764,33 @@ GET /projects/{projectId}/wizard/steps/{stepId}
 
 재무 추정 및 유닛 이코노믹스 계산
 
-### 5.1 재무 추정 생성 (프로젝트 연동)
+### 5.1 재무 데이터 조회
+
+저장된 재무 추정 결과를 조회합니다.
+
+```
+GET /projects/{projectId}/financials
+```
+
+**Path Parameters**
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| projectId | string (UUID) | 프로젝트 ID |
+
+**Response 200**
+
+`5.2 재무 추정 생성`의 응답과 동일
+
+**Errors**
+
+| 상태코드 | 설명 |
+|----------|------|
+| 404 | 재무 데이터 없음 |
+
+---
+
+### 5.2 재무 추정 생성 (프로젝트 연동)
 
 프로젝트에 연동된 재무 추정을 생성합니다.
 
@@ -714,7 +877,7 @@ POST /projects/{projectId}/financials/generate
 
 ---
 
-### 5.2 재무 추정 미리보기 (독립형)
+### 5.3 재무 추정 미리보기 (독립형)
 
 프로젝트 연동 없이 재무 추정 결과를 미리 확인합니다.
 
@@ -724,11 +887,50 @@ POST /financials/preview
 
 **Request Body**
 
-`5.1 재무 추정 생성`과 동일
+`5.2 재무 추정 생성`과 동일
 
 **Response 200**
 
-`5.1 재무 추정 생성`과 동일 (`projectId`가 `"preview"`로 설정됨)
+`5.2 재무 추정 생성`과 동일 (`projectId`가 `"preview"`로 설정됨)
+
+---
+
+### 5.4 재무 가정값 저장
+
+재무 시뮬레이션 가정값만 저장합니다 (시뮬레이션 재실행 없음).
+
+```
+PUT /projects/{projectId}/financials/assumptions
+```
+
+**Path Parameters**
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| projectId | string (UUID) | 프로젝트 ID |
+
+**Request Body**
+
+```json
+{
+  "initialCapital": 100000000,
+  "averageRevenuePerUser": 50000,
+  "monthlyMarketingBudget": 5000000,
+  "customerAcquisitionCost": 30000,
+  "monthlyChurnRate": 0.05,
+  "monthlyFixedCosts": 10000000,
+  "variableCostRate": 0.3
+}
+```
+
+**Response 200**
+
+```json
+{
+  "message": "저장되었습니다.",
+  "updatedAt": "2025-12-20T10:30:00"
+}
+```
 
 ---
 
@@ -890,7 +1092,403 @@ GET /projects/{projectId}/documents/business-plan/versions
 
 ---
 
-## 7. Export API
+## 7. BizPlan Sections API
+
+AI를 통한 사업계획서 섹션 생성 및 관리
+
+### 7.1 AI 섹션 생성
+
+AI Engine을 통해 특정 섹션을 생성합니다.
+
+```
+POST /projects/{projectId}/bizplan/sections/{sectionType}/generate
+```
+
+**Path Parameters**
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| projectId | string (UUID) | 프로젝트 ID |
+| sectionType | string | 섹션 타입 |
+
+**Request Body**
+
+```json
+{
+  "mode": "easy",
+  "additionalInstructions": "기술적인 내용을 더 강조해주세요"
+}
+```
+
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| mode | string | ❌ | 생성 모드 (`easy` / `expert`) |
+| additionalInstructions | string | ❌ | AI에게 전달할 추가 지시사항 |
+
+**Response 200**
+
+```json
+{
+  "projectId": "550e8400-e29b-41d4-a716-446655440000",
+  "sectionType": "executive_summary",
+  "title": "사업개요",
+  "content": "AI가 생성한 섹션 내용...",
+  "wordCount": 500,
+  "modelUsed": "gemini-1.5-pro",
+  "generationTimeMs": 3500,
+  "suggestions": ["개선 제안 1", "개선 제안 2"],
+  "consistencyWarnings": [],
+  "updatedAt": "2025-12-20T10:30:00"
+}
+```
+
+**Errors**
+
+| 상태코드 | 설명 |
+|----------|------|
+| 400 | 잘못된 섹션 타입 |
+| 404 | 프로젝트를 찾을 수 없음 |
+| 500 | AI 엔진 오류 |
+
+---
+
+### 7.2 섹션 목록 조회
+
+프로젝트의 모든 섹션 목록을 조회합니다.
+
+```
+GET /projects/{projectId}/bizplan/sections
+```
+
+**Response 200**
+
+```json
+{
+  "projectId": "550e8400-e29b-41d4-a716-446655440000",
+  "sections": [
+    {
+      "sectionType": "executive_summary",
+      "title": "사업개요",
+      "wordCount": 500,
+      "updatedAt": "2025-12-20T10:30:00"
+    }
+  ],
+  "totalSections": 10,
+  "completedSections": 3
+}
+```
+
+---
+
+### 7.3 섹션 조회
+
+특정 섹션의 내용을 조회합니다.
+
+```
+GET /projects/{projectId}/bizplan/sections/{sectionType}
+```
+
+**Response 200**
+
+`7.1 AI 섹션 생성`의 응답과 동일 (suggestions, consistencyWarnings 제외)
+
+---
+
+### 7.4 섹션 수정
+
+섹션의 제목과 내용을 수동으로 수정합니다.
+
+```
+PUT /projects/{projectId}/bizplan/sections/{sectionType}
+```
+
+**Request Body**
+
+```json
+{
+  "title": "수정된 제목",
+  "content": "수정된 내용..."
+}
+```
+
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| title | string | ✅ | 섹션 제목 (최대 255자) |
+| content | string | ✅ | 섹션 내용 |
+
+**Response 200**
+
+`7.1 AI 섹션 생성`의 응답과 동일
+
+---
+
+### 7.5 섹션 삭제
+
+특정 섹션을 삭제합니다.
+
+```
+DELETE /projects/{projectId}/bizplan/sections/{sectionType}
+```
+
+**Response 204**
+
+No Content
+
+---
+
+### 7.6 섹션 타입 목록 조회
+
+지원되는 모든 섹션 타입 목록을 조회합니다.
+
+```
+GET /bizplan/section-types
+```
+
+**Response 200**
+
+```json
+{
+  "sectionTypes": [
+    {
+      "type": "executive_summary",
+      "name": "사업개요",
+      "description": "사업의 핵심 내용을 요약합니다."
+    },
+    {
+      "type": "problem_definition",
+      "name": "문제 정의",
+      "description": "해결하고자 하는 문제를 정의합니다."
+    },
+    {
+      "type": "solution",
+      "name": "솔루션",
+      "description": "제안하는 솔루션을 설명합니다."
+    }
+  ]
+}
+```
+
+---
+
+## 8. PMF API
+
+Product-Market Fit 진단
+
+### 8.1 PMF 설문 질문 조회
+
+PMF 진단용 설문 질문 목록을 반환합니다.
+
+```
+GET /pmf/questions
+```
+
+**Response 200**
+
+```json
+{
+  "questions": [
+    {
+      "id": "pmf-1",
+      "question": "만약 이 제품을 더 이상 사용할 수 없게 된다면 어떻게 느끼시겠습니까?",
+      "type": "radio",
+      "required": true,
+      "options": [
+        { "value": 1, "label": "매우 실망할 것이다" },
+        { "value": 2, "label": "다소 실망할 것이다" },
+        { "value": 3, "label": "실망하지 않을 것이다" }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+### 8.2 PMF 평가 기준 조회
+
+PMF 진단에 사용되는 평가 기준 목록을 조회합니다.
+
+```
+GET /pmf/criteria
+```
+
+**Response 200**
+
+```json
+{
+  "criteria": [
+    {
+      "category": "market_fit",
+      "name": "시장 적합성",
+      "weight": 0.3,
+      "description": "목표 시장에 대한 적합성 평가"
+    },
+    {
+      "category": "problem_solution",
+      "name": "문제-솔루션 적합성",
+      "weight": 0.25,
+      "description": "문제 해결 능력 평가"
+    }
+  ]
+}
+```
+
+---
+
+### 8.3 PMF 설문 결과 제출
+
+PMF 설문 답변을 제출하고 분석 결과를 반환합니다.
+
+```
+POST /projects/{projectId}/pmf/submit
+```
+
+**Request Body**
+
+```json
+{
+  "answers": [
+    { "questionId": "pmf-1", "value": 1 },
+    { "questionId": "pmf-2", "value": [1, 2, 3] },
+    { "questionId": "pmf-5", "value": 9 }
+  ]
+}
+```
+
+**Response 200**
+
+```json
+{
+  "projectId": "550e8400-e29b-41d4-a716-446655440000",
+  "score": 45,
+  "level": "excellent",
+  "risks": [
+    {
+      "id": "risk-1",
+      "title": "PMF 미달성",
+      "description": "현재 제품이 시장의 핵심 니즈를 충족하지 못하고 있습니다.",
+      "level": "high"
+    }
+  ],
+  "recommendations": [
+    {
+      "id": "rec-1",
+      "title": "고객 인터뷰 진행",
+      "description": "핵심 고객층과 심층 인터뷰를 통해 제품 개선점을 파악하세요.",
+      "priority": "high"
+    }
+  ],
+  "answers": [...],
+  "createdAt": "2025-12-20T10:30:00"
+}
+```
+
+---
+
+### 8.4 PMF 리포트 조회
+
+저장된 PMF 분석 결과를 조회합니다.
+
+```
+GET /projects/{projectId}/pmf/report
+```
+
+**Response 200**
+
+`8.3 PMF 설문 결과 제출`의 응답과 동일
+
+**Errors**
+
+| 상태코드 | 설명 |
+|----------|------|
+| 404 | PMF 리포트 없음 |
+
+---
+
+### 8.5 AI PMF 진단 실행
+
+사업계획서 내용과 재무 데이터를 AI로 분석하여 PMF를 진단합니다.
+
+```
+POST /projects/{projectId}/pmf/ai-diagnose
+```
+
+**Request Body**
+
+```json
+{
+  "includeFinancialData": true
+}
+```
+
+| 필드 | 타입 | 필수 | 기본값 | 설명 |
+|------|------|------|--------|------|
+| includeFinancialData | boolean | ❌ | true | 재무 데이터 포함 여부 |
+
+**Response 200**
+
+```json
+{
+  "projectId": "550e8400-e29b-41d4-a716-446655440000",
+  "overallScore": 75,
+  "scoreGrade": "good",
+  "categoryScores": {
+    "market_fit": 80,
+    "problem_solution": 70,
+    "revenue_model": 75
+  },
+  "risks": [
+    {
+      "category": "market",
+      "title": "시장 규모 불확실",
+      "description": "목표 시장의 규모 검증이 필요합니다.",
+      "level": "medium",
+      "recommendation": "추가 시장 조사를 진행하세요.",
+      "relatedSections": ["market_analysis"]
+    }
+  ],
+  "strengths": ["명확한 문제 정의", "차별화된 솔루션"],
+  "summary": "전반적으로 양호한 PMF 수준입니다...",
+  "priorityActions": ["시장 규모 검증", "고객 피드백 수집"],
+  "modelUsed": "gemini-1.5-pro",
+  "analysisTimeMs": 3500,
+  "analyzedAt": "2025-12-20T10:30:00"
+}
+```
+
+**PMF 점수 등급**
+
+| Grade | 점수 범위 | 설명 |
+|-------|----------|------|
+| excellent | 80-100 | 뛰어남 |
+| good | 60-79 | 좋음 |
+| fair | 40-59 | 보통 |
+| poor | 20-39 | 미흡 |
+| critical | 0-19 | 심각 |
+
+---
+
+### 8.6 AI PMF 진단 결과 조회
+
+저장된 AI PMF 진단 결과를 조회합니다.
+
+```
+GET /projects/{projectId}/pmf/ai-diagnose
+```
+
+**Response 200**
+
+`8.5 AI PMF 진단 실행`의 응답과 동일
+
+**Errors**
+
+| 상태코드 | 설명 |
+|----------|------|
+| 404 | 진단 결과 없음 |
+
+---
+
+## 9. Export API
 
 사업계획서 내보내기 (PDF/HTML)
 
@@ -966,11 +1564,11 @@ GET /projects/{projectId}/export/formats
 
 ---
 
-## 8. Actuator API
+## 10. Actuator API
 
 애플리케이션 모니터링
 
-### 8.1 Health Check
+### 10.1 Health Check
 
 ```
 GET /actuator/health
@@ -986,7 +1584,7 @@ GET /actuator/health
 
 ---
 
-### 8.2 Prometheus Metrics
+### 10.2 Prometheus Metrics
 
 ```
 GET /actuator/prometheus
@@ -1093,6 +1691,8 @@ MVP에서는 Rate Limit을 적용하지 않습니다.
 
 | 버전 | 날짜 | 변경사항 |
 |------|------|----------|
+| 1.3.0 | 2025-12-20 | BizPlan Sections API 추가, PMF API 추가, AI Engine 연동 |
+| 1.2.0 | 2025-12-20 | Projects PATCH/DELETE 추가, Wizard 단계 정의 API 추가, Financials 조회/저장 API 추가 |
 | 1.1.0 | 2025-12-06 | Authentication/Users API 추가, JWT 인증 적용 |
 | 1.0.0 | 2025-12-06 | 초기 버전 |
 
