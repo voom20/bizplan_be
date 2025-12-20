@@ -140,10 +140,13 @@ uvicorn app.main:app --port 8000
 | POST | `/projects` | 새 프로젝트 생성 |
 | GET | `/projects/{id}` | 프로젝트 상세 정보 조회 |
 | GET | `/projects` | 내 프로젝트 목록 조회 |
+| PATCH | `/projects/{id}` | 프로젝트 수정 (제목, 상태) |
+| DELETE | `/projects/{id}` | 프로젝트 삭제 |
 
 ### Wizard
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| GET | `/projects/{id}/wizard/steps` | Wizard 단계 정의 조회 |
 | POST | `/projects/{id}/wizard/steps` | Wizard 단계별 답변 저장 |
 | GET | `/projects/{id}/wizard/answers` | 전체 Wizard 답변 조회 |
 | GET | `/projects/{id}/wizard/steps/{stepId}` | 특정 단계 답변 조회 |
@@ -157,11 +160,33 @@ uvicorn app.main:app --port 8000
 | GET | `/projects/{id}/documents/business-plan/versions` | 모든 버전 목록 조회 |
 | GET | `/projects/{id}/documents/{docId}` | 특정 문서 조회 |
 
+### BizPlan Sections (AI 생성)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/projects/{id}/bizplan/sections/{type}/generate` | AI 섹션 생성 |
+| GET | `/projects/{id}/bizplan/sections` | 섹션 목록 조회 |
+| GET | `/projects/{id}/bizplan/sections/{type}` | 특정 섹션 조회 |
+| PUT | `/projects/{id}/bizplan/sections/{type}` | 섹션 수정 |
+| DELETE | `/projects/{id}/bizplan/sections/{type}` | 섹션 삭제 |
+| GET | `/bizplan/section-types` | 지원 섹션 타입 목록 |
+
 ### Financials
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| GET | `/projects/{id}/financials` | 재무 데이터 조회 |
 | POST | `/projects/{id}/financials/generate` | 재무 추정 생성 (저장) |
+| PUT | `/projects/{id}/financials/assumptions` | 재무 가정값 저장 |
 | POST | `/financials/preview` | 재무 추정 미리보기 (저장 안함) |
+
+### PMF (Product-Market Fit)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/pmf/questions` | PMF 설문 질문 목록 |
+| GET | `/pmf/criteria` | PMF 평가 기준 목록 |
+| POST | `/projects/{id}/pmf/submit` | PMF 설문 결과 제출 |
+| GET | `/projects/{id}/pmf/report` | PMF 리포트 조회 |
+| POST | `/projects/{id}/pmf/ai-diagnose` | AI PMF 진단 실행 |
+| GET | `/projects/{id}/pmf/ai-diagnose` | AI PMF 진단 결과 조회 |
 
 ### Export
 | Method | Endpoint | Description |
@@ -177,12 +202,17 @@ uvicorn app.main:app --port 8000
 bizplan_be/
 ├── src/main/java/com/vibe/bizplan/bizplan_be/
 │   ├── api/                    # REST Controllers
+│   │   ├── AuthController.java
+│   │   ├── BizPlanMetaController.java
+│   │   ├── BizPlanSectionController.java
 │   │   ├── BusinessPlanController.java
 │   │   ├── ExportController.java
 │   │   ├── FinancialController.java
 │   │   ├── FinancialPreviewController.java
 │   │   ├── GlobalExceptionHandler.java
+│   │   ├── PmfController.java
 │   │   ├── ProjectController.java
+│   │   ├── UserController.java
 │   │   └── WizardController.java
 │   ├── config/                 # Spring Configurations
 │   │   ├── SecurityConfig.java
@@ -204,7 +234,9 @@ bizplan_be/
 │   │   ├── V1__create_project_table.sql
 │   │   ├── V2__add_wizard_answers_column.sql
 │   │   ├── V3__create_business_plan_document_table.sql
-│   │   └── V4__create_users_table.sql
+│   │   ├── V4__create_users_table.sql
+│   │   ├── V5__create_financial_data_table.sql
+│   │   └── V6__create_bizplan_sections_table.sql
 │   ├── templates/export/       # PDF Templates
 │   ├── application.properties
 │   └── application-mysql.properties
