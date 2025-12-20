@@ -2,6 +2,8 @@ package com.vibe.bizplan.bizplan_be.infrastructure.client;
 
 import com.vibe.bizplan.bizplan_be.infrastructure.client.dto.BizPlanGenerateRequest;
 import com.vibe.bizplan.bizplan_be.infrastructure.client.dto.BizPlanGenerateResponse;
+import com.vibe.bizplan.bizplan_be.infrastructure.client.dto.PmfDiagnoseRequest;
+import com.vibe.bizplan.bizplan_be.infrastructure.client.dto.PmfDiagnoseResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -70,6 +72,39 @@ public class AiEngineClient {
             log.error("AI 엔진 호출 실패: projectId={}, section={}, error={}",
                     request.projectId(), request.sectionType(), e.getMessage());
             throw new AiEngineException("AI 엔진 호출에 실패했습니다: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * PMF AI 진단 요청.
+     *
+     * @param request 진단 요청
+     * @return 진단 응답
+     * @throws AiEngineException AI 엔진 호출 실패 시
+     */
+    public PmfDiagnoseResponse diagnosePmf(PmfDiagnoseRequest request) {
+        log.info("AI 엔진 PMF 진단 요청: projectId={}", request.projectId());
+        
+        try {
+            @SuppressWarnings("null")
+            PmfDiagnoseResponse response = restClient.post()
+                    .uri("/api/v1/pmf/diagnose")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(PmfDiagnoseResponse.class);
+            
+            log.info("AI 엔진 PMF 진단 완료: projectId={}, score={}, grade={}",
+                    request.projectId(),
+                    response != null ? response.overallScore() : 0,
+                    response != null ? response.scoreGrade() : "unknown");
+            
+            return response;
+            
+        } catch (RestClientException e) {
+            log.error("AI 엔진 PMF 진단 실패: projectId={}, error={}",
+                    request.projectId(), e.getMessage());
+            throw new AiEngineException("AI 엔진 PMF 진단에 실패했습니다: " + e.getMessage(), e);
         }
     }
 

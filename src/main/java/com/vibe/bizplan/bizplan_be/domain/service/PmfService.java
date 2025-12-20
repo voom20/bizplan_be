@@ -1,11 +1,24 @@
 package com.vibe.bizplan.bizplan_be.domain.service;
 
+import com.vibe.bizplan.bizplan_be.domain.entity.BizPlanSection;
+import com.vibe.bizplan.bizplan_be.domain.entity.Project;
+import com.vibe.bizplan.bizplan_be.domain.exception.ProjectNotFoundException;
+import com.vibe.bizplan.bizplan_be.domain.service.util.JsonParsingUtil;
+import com.vibe.bizplan.bizplan_be.dto.request.AiPmfDiagnoseRequest;
 import com.vibe.bizplan.bizplan_be.dto.request.PmfSubmitRequest;
+import com.vibe.bizplan.bizplan_be.dto.response.AiPmfDiagnoseResponse;
 import com.vibe.bizplan.bizplan_be.dto.response.PmfQuestionResponse;
 import com.vibe.bizplan.bizplan_be.dto.response.PmfQuestionResponse.QuestionOption;
 import com.vibe.bizplan.bizplan_be.dto.response.PmfQuestionsResponse;
 import com.vibe.bizplan.bizplan_be.dto.response.PmfReportResponse;
 import com.vibe.bizplan.bizplan_be.dto.response.PmfReportResponse.*;
+import com.vibe.bizplan.bizplan_be.infrastructure.client.AiEngineClient;
+import com.vibe.bizplan.bizplan_be.infrastructure.client.dto.PmfDiagnoseRequest;
+import com.vibe.bizplan.bizplan_be.infrastructure.client.dto.PmfDiagnoseResponse;
+import com.vibe.bizplan.bizplan_be.infrastructure.repository.BizPlanSectionRepository;
+import com.vibe.bizplan.bizplan_be.infrastructure.repository.FinancialDataRepository;
+import com.vibe.bizplan.bizplan_be.infrastructure.repository.ProjectRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -20,10 +33,19 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class PmfService {
+
+    private final ProjectRepository projectRepository;
+    private final BizPlanSectionRepository sectionRepository;
+    private final FinancialDataRepository financialDataRepository;
+    private final AiEngineClient aiEngineClient;
+    private final JsonParsingUtil jsonParsingUtil;
 
     // MVP: 인메모리 저장소 (프로젝트ID -> PMF 리포트)
     private final Map<String, PmfReportResponse> reportStore = new ConcurrentHashMap<>();
+    // AI PMF 진단 결과 저장소
+    private final Map<String, AiPmfDiagnoseResponse> aiDiagnoseStore = new ConcurrentHashMap<>();
 
     /**
      * PMF 설문 질문 목록 조회.
@@ -159,6 +181,87 @@ public class PmfService {
     public Optional<PmfReportResponse> getReport(String projectId) {
         log.info("[PMF] 리포트 조회 - projectId={}", projectId);
         return Optional.ofNullable(reportStore.get(projectId));
+    }
+
+    /**
+     * AI 기반 PMF 진단.
+     * 사업계획서 내용과 재무 데이터를 분석하여 PMF를 진단한다.
+     *
+     * @param projectId 프로젝트 ID
+     * @param request 진단 요청
+     * @return AI PMF 진단 결과
+     */
+    public AiPmfDiagnoseResponse diagnosePmfWithAi(String projectId, AiPmfDiagnoseRequest request) {
+        Objects.requireNonNull(projectId, "프로젝트 ID는 필수입니다");
+        long startTime = System.currentTimeMillis();
+        log.info("[PMF] AI 진단 시작 - projectId={}, includeFinancialData={}",
+                projectId, request != null && request.isIncludeFinancialData());
+
+        // 프로젝트 조회
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> {
+                    log.error("[PMF] 프로젝트 조회 실패 - projectId={}", projectId);
+                    return new ProjectNotFoundException(projectId);
+                });
+
+        String templateCode = project.getTemplateCode().name();
+
+        // Wizard 답변 파싱
+        Map<String, Object> context = jsonParsingUtil.parseToImmutableMap(project.getWizardAnswers());
+
+        // 사업계획서 섹션 내용 조회
+        Map<String, String> businessPlanContent = new LinkedHashMap<>();
+        List<BizPlanSection> sections = sectionRepository.findByProjectIdOrderBySectionType(projectId);
+        for (BizPlanSection section : sections) {
+            if (section.getContent() != null && !section.getContent().isBlank()) {
+                businessPlanContent.put(section.getSectionType(), section.getContent());
+            }
+        }
+        log.debug("[PMF] 사업계획서 섹션 조회 완료 - count={}", businessPlanContent.size());
+
+        // 재무 데이터 조회 (선택)
+        Map<String, Object> financialData = null;
+        if (request != null && request.isIncludeFinancialData()) {
+            financialData = financialDataRepository.findByProjectId(projectId)
+                    .map(fd -> {
+                        Map<String, Object> data = new LinkedHashMap<>();
+                        data.put("assumptions", jsonParsingUtil.parseToImmutableMap(fd.getAssumptions()));
+                        data.put("projections", jsonParsingUtil.parseToImmutableMap(fd.getProjectionResult()));
+                        return data;
+                    })
+                    .orElse(null);
+            log.debug("[PMF] 재무 데이터 조회 완료 - found={}", financialData != null);
+        }
+
+        // AI Engine 요청 생성
+        PmfDiagnoseRequest aiRequest = financialData != null
+                ? PmfDiagnoseRequest.withFinancialData(projectId, templateCode, businessPlanContent, context, financialData)
+                : PmfDiagnoseRequest.of(projectId, templateCode, businessPlanContent, context);
+
+        // AI Engine 호출
+        log.debug("[PMF] AI 엔진 호출 중 - projectId={}", projectId);
+        PmfDiagnoseResponse aiResponse = aiEngineClient.diagnosePmf(aiRequest);
+
+        // 결과 변환 및 저장
+        AiPmfDiagnoseResponse response = AiPmfDiagnoseResponse.from(aiResponse);
+        aiDiagnoseStore.put(projectId, response);
+
+        long duration = System.currentTimeMillis() - startTime;
+        log.info("[PMF] AI 진단 완료 - projectId={}, score={}, grade={}, duration={}ms",
+                projectId, response.overallScore(), response.scoreGrade(), duration);
+
+        return response;
+    }
+
+    /**
+     * 저장된 AI PMF 진단 결과 조회.
+     *
+     * @param projectId 프로젝트 ID
+     * @return AI PMF 진단 결과 (Optional)
+     */
+    public Optional<AiPmfDiagnoseResponse> getAiDiagnoseResult(String projectId) {
+        log.info("[PMF] AI 진단 결과 조회 - projectId={}", projectId);
+        return Optional.ofNullable(aiDiagnoseStore.get(projectId));
     }
 
     /**
