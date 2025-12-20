@@ -4,6 +4,7 @@ import com.vibe.bizplan.bizplan_be.domain.entity.User;
 import com.vibe.bizplan.bizplan_be.domain.service.ProjectService;
 import com.vibe.bizplan.bizplan_be.domain.service.TemplateService;
 import com.vibe.bizplan.bizplan_be.dto.request.CreateProjectRequest;
+import com.vibe.bizplan.bizplan_be.dto.request.UpdateProjectRequest;
 import com.vibe.bizplan.bizplan_be.dto.response.ProjectResponse;
 import com.vibe.bizplan.bizplan_be.dto.response.TemplateResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -165,5 +166,44 @@ public class ProjectController {
             log.debug("[Project] 프로젝트 목록 조회 완료 (MVP) - count={}", projects.size());
         }
         return ResponseEntity.ok(projects);
+    }
+
+    /**
+     * 프로젝트 수정.
+     * 제공된 필드만 업데이트하며, null 값은 무시된다.
+     * 인증된 사용자의 경우 소유권 검증 수행.
+     * MVP: 인증 없이도 수정 가능.
+     *
+     * @param projectId 프로젝트 ID
+     * @param request 수정 요청 DTO
+     * @param user 현재 인증된 사용자 (없을 수 있음)
+     * @return 수정된 프로젝트 정보
+     */
+    @PatchMapping("/{projectId}")
+    @Operation(summary = "프로젝트 수정", description = "프로젝트 제목 및 상태를 수정합니다. 제공된 필드만 업데이트됩니다.")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "수정 성공",
+                    content = @Content(schema = @Schema(implementation = ProjectResponse.class))),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청 데이터"),
+            @ApiResponse(responseCode = "403", description = "접근 권한 없음"),
+            @ApiResponse(responseCode = "404", description = "프로젝트를 찾을 수 없음")
+    })
+    public ResponseEntity<ProjectResponse> updateProject(
+            @Parameter(description = "프로젝트 ID") @PathVariable String projectId,
+            @Valid @RequestBody UpdateProjectRequest request,
+            @AuthenticationPrincipal User user
+    ) {
+        ProjectResponse response;
+        if (user != null) {
+            // 인증된 사용자: 소유권 검증
+            response = projectService.updateProject(projectId, request, user.getId(), user.getRole());
+            log.debug("[Project] 프로젝트 수정 완료 - projectId={}, userId={}", projectId, user.getId());
+        } else {
+            // MVP: 검증 없이 수정
+            response = projectService.updateProject(projectId, request);
+            log.debug("[Project] 프로젝트 수정 완료 (MVP) - projectId={}", projectId);
+        }
+        return ResponseEntity.ok(response);
     }
 }
