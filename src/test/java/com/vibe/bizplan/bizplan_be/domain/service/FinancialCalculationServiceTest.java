@@ -1,19 +1,27 @@
 package com.vibe.bizplan.bizplan_be.domain.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vibe.bizplan.bizplan_be.dto.request.FinancialAssumptionsRequest;
 import com.vibe.bizplan.bizplan_be.dto.response.FinancialProjectionResponse;
 import com.vibe.bizplan.bizplan_be.dto.response.FinancialProjectionResponse.MonthlyPL;
 import com.vibe.bizplan.bizplan_be.dto.response.FinancialProjectionResponse.UnitEconomics;
 import com.vibe.bizplan.bizplan_be.dto.response.FinancialProjectionResponse.YearlySummary;
+import com.vibe.bizplan.bizplan_be.infrastructure.repository.FinancialDataRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 /**
  * FinancialCalculationService 단위 테스트.
@@ -25,13 +33,23 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - 유닛 이코노믹스 (LTV, CAC, BEP) 계산
  */
 @DisplayName("FinancialCalculationService 단위 테스트")
+@ExtendWith(MockitoExtension.class)
 class FinancialCalculationServiceTest {
 
+    @Mock
+    private FinancialDataRepository financialDataRepository;
+
     private FinancialCalculationService financialCalculationService;
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
-        financialCalculationService = new FinancialCalculationService();
+        objectMapper = new ObjectMapper();
+        financialCalculationService = new FinancialCalculationService(financialDataRepository, objectMapper);
+        
+        // Mock repository save behavior
+        when(financialDataRepository.findByProjectId(any())).thenReturn(Optional.empty());
+        when(financialDataRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     /**
